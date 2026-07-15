@@ -1,0 +1,16 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+context: |
+  语言约定:所有 OpenSpec 文档(proposal、spec、change、tasks 等)一律使用简体中文撰写。
+  代码、标识符、命令、文件路径保持原样,不翻译。
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - 使用简体中文撰写
+  spec:
+    - 使用简体中文撰写
+  tasks:
+    - 使用简体中文撰写

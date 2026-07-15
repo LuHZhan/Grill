@@ -1,0 +1,24 @@
+# 依赖
+node_modules/
+
+# 密钥与本地环境 —— 绝不入库
+.env
+.env.*
+!.env.example
+
+# 预处理产出(每次全量重新生成,不入库)
+light-profile.json
+*.light-profile.json
+
+# 面试存档(个人记录)
+sessions/
+
+# 构建产物
+dist/
+build/
+*.tsbuildinfo
+
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db

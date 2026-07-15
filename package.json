@@ -1,0 +1,21 @@
+{
+  "name": "lazygrill",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "项目学习-面试-履历 Agent —— 面试模块 MVP",
+  "scripts": {
+    "preprocess": "tsx src/preprocess/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "^1.0.0",
+    "ai": "^5.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
