@@ -1,26 +1,26 @@
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** 扫描时跳过的噪声目录 —— 保证轻档案体积足够小 */
+/**
+ * 扫描时跳过的噪声目录(小写,匹配时大小写不敏感)—— 保证轻档案体积足够小。
+ * 隐藏目录(`.` 开头)由 isIgnoredDir 统一跳过,无需在此逐个列举。
+ */
 export const IGNORED_DIRS = new Set([
   'node_modules',
   'dist',
   'build',
   'out',
-  '.git',
-  '.next',
-  '.nuxt',
-  '.turbo',
-  '.cache',
   'coverage',
   '__pycache__',
-  '.venv',
   'venv',
-  '.pytest_cache',
-  '.idea',
-  '.vscode',
   'target',
   'vendor',
+  // 对"给裁判找接缝的弹药"零价值的噪声:测试、文档、日志
+  'tests',
+  'test',
+  '__tests__',
+  'docs',
+  'logs',
 ]);
 
 const IGNORED_FILE_EXT = new Set([
@@ -43,9 +43,15 @@ interface Entry {
 
 function readEntries(dir: string): Entry[] {
   return readdirSync(dir, { withFileTypes: true })
-    .filter((d) => (d.isDirectory() ? !IGNORED_DIRS.has(d.name) : !isIgnoredFile(d.name)))
+    .filter((d) => (d.isDirectory() ? !isIgnoredDir(d.name) : !isIgnoredFile(d.name)))
     .map((d) => ({ name: d.name, isDir: d.isDirectory() }))
     .sort((a, b) => (a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1));
+}
+
+/** 隐藏目录(.git/.next/.vscode/.claude 等)一律跳过;其余按忽略清单大小写不敏感匹配 */
+function isIgnoredDir(name: string): boolean {
+  if (name.startsWith('.')) return true;
+  return IGNORED_DIRS.has(name.toLowerCase());
 }
 
 function isIgnoredFile(name: string): boolean {
