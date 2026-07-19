@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #fbfaf8; font-family: "Manrope","Noto Sans SC",sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #17161a; text-decoration: none; }
+  a:hover { opacity: 0.75; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+</helmet>
+
+<div style="display:flex; flex-direction:column; height:100vh; min-height:720px; color:#17161a;">
+
+  <!-- top bar -->
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 28px; border-bottom:1px solid #edebe6; background:#fbfaf8; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; letter-spacing:3px;">GRILL<span style="color:oklch(0.52 0.16 285);">//BANK</span></span>
+      <span style="width:1px; height:16px; background:#ddd9d2;"></span>
+      <span style="font-size:13.5px; font-weight:700;">问答仓库</span>
+      <span style="font-size:12px; color:#b4b1ab;">Agent 工程师 · 面试题收集</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:20px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a8690;">
+      <span><b style="color:#17161a;">{{ total }}</b> 题</span>
+      <span style="color:oklch(0.5 0.13 155);"><b>{{ nSolid }}</b> 已掌握</span>
+      <span style="color:oklch(0.6 0.13 55);"><b>{{ dueCount }}</b> 待复习</span>
+    </div>
+  </div>
+
+  <!-- filter row -->
+  <div style="display:flex; align-items:center; gap:8px; padding:10px 28px; border-bottom:1px solid #edebe6; flex-shrink:0; font-size:12px; flex-wrap:wrap;">
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; margin-right:4px;">分类</span>
+    <sc-for list="{{ cats }}" as="c" hint-placeholder-count="5">
+      <span onClick="{{ c.pick }}" style="{{ c.style }}">{{ c.name }}</span>
+    </sc-for>
+    <span style="width:1px; height:16px; background:#e2dfd8; margin:0 8px;"></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; margin-right:4px;">状态</span>
+    <sc-for list="{{ statuses }}" as="s" hint-placeholder-count="3">
+      <span onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.name }}</span>
+    </sc-for>
+    <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:#b4b1ab;">「选中对答」= 载入右侧对话上下文</span>
+  </div>
+
+  <div style="flex:1; display:flex; min-height:0;">
+
+    <!-- question list -->
+    <div style="flex:1; min-width:0; overflow-y:auto;">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+        <div onClick="{{ r.toggle }}" style="{{ r.rowStyle }}">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="{{ r.dotStyle }}"></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#8a8690;">{{ r.cat }}</span>
+            <span style="{{ r.masteryStyle }}">{{ r.masteryLabel }}</span>
+            <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#b4b1ab;">{{ r.source }} · {{ r.last }}</span>
+            <button onClick="{{ r.select }}" style="{{ r.selectStyle }}">{{ r.selectLabel }}</button>
+          </div>
+          <div style="font-family:'Noto Serif SC',serif; font-size:17px; font-weight:700; line-height:1.6; color:#17161a; text-wrap:pretty;">{{ r.q }}</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#b4b1ab;">{{ r.tags }}</div>
+          <sc-if value="{{ r.isOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ stop }}" style="background:#fff; border:1px solid #edebe6; border-radius:12px; padding:14px 18px; display:flex; flex-direction:column; gap:9px; margin-top:4px; cursor:default;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">答案要点 · 我的笔记</span>
+              <sc-if value="{{ r.noAnswer }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:12.5px; color:oklch(0.6 0.13 55); line-height:1.7;">暂无答案——在右侧对话里点「起草答案」，确认后入库。</div>
+              </sc-if>
+              <sc-for list="{{ r.points }}" as="p" hint-placeholder-count="2">
+                <div style="display:flex; gap:9px; font-size:13px; line-height:1.7; color:#54515c;"><span style="color:oklch(0.52 0.16 285); flex-shrink:0; font-weight:700;">·</span><span>{{ p }}</span></div>
+              </sc-for>
+              <div style="display:flex; gap:8px; margin-top:4px;">
+                <button onClick="{{ r.markSolid }}" style="font-family:inherit; font-size:12px; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer; background:transparent; border:1px solid oklch(0.8 0.08 155); color:oklch(0.5 0.13 155);">扛住了</button>
+                <button onClick="{{ r.markPartial }}" style="font-family:inherit; font-size:12px; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer; background:transparent; border:1px solid oklch(0.85 0.08 60); color:oklch(0.6 0.13 55);">半懂</button>
+                <button onClick="{{ r.markCollapsed }}" style="font-family:inherit; font-size:12px; font-weight:700; padding:6px 14px; border-radius:8px; cursor:pointer; background:transparent; border:1px solid oklch(0.85 0.09 25); color:oklch(0.6 0.18 25);">崩了</button>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+      <div style="padding:20px 28px 40px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#b4b1ab;">{{ shownCount }} 题 · 点击展开要点 ·「选中对答」载入右侧对话</div>
+    </div>
+
+    <!-- agent chat panel -->
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ true }}">
+      <div style="width:380px; flex-shrink:0; border-left:1px solid #edebe6; background:#f6f4f0; display:flex; flex-direction:column; min-height:0; position:relative;">
+        <div style="position:absolute; right:2px; bottom:80px; font-family:'JetBrains Mono',monospace; font-size:130px; font-weight:700; color:#17161a; opacity:0.04; pointer-events:none; line-height:1;">复</div>
+
+        <!-- panel header -->
+        <div style="padding:16px 20px 12px; border-bottom:1px solid #e7e4dd; display:flex; flex-direction:column; gap:9px; flex-shrink:0;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:oklch(0.52 0.16 285);"></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#8a8690;">复习 AGENT · 对答</span>
+            <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#b4b1ab;">待复习 <b style="color:oklch(0.6 0.13 55);">{{ dueCount }}</b> / {{ total }}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; flex-shrink:0;">上下文</span>
+            <span style="{{ ctxChipStyle }}">{{ ctxLabel }}</span>
+          </div>
+        </div>
+
+        <!-- transcript -->
+        <div ref="{{ chatRef }}" style="flex:1; min-height:0; overflow-y:auto; padding:18px 20px; display:flex; flex-direction:column; gap:16px;">
+          <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="2">
+            <sc-if value="{{ m.isSys }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; color:#b4b1ab;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isAgent }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:oklch(0.45 0.14 285);">AGENT</span>
+                  <sc-if value="{{ m.verdict }}" hint-placeholder-val="{{ false }}">
+                    <span style="{{ m.chipStyle }}">{{ m.verdict }}</span>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ m.isQuestion }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-family:'Noto Serif SC',serif; font-size:15.5px; font-weight:700; line-height:1.7; color:#17161a; text-wrap:pretty;">{{ m.text }}</div>
+                </sc-if>
+                <sc-if value="{{ m.isPlain }}" hint-placeholder-val="{{ true }}">
+                  <div style="font-size:13px; line-height:1.8; color:#17161a; white-space:pre-line;">{{ m.text }}</div>
+                </sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+              <div style="border-left:3px solid #d4d0c8; padding-left:11px; display:flex; flex-direction:column; gap:4px;">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">我</span>
+                <div style="font-size:13px; line-height:1.75; color:#54515c;">{{ m.text }}</div>
+              </div>
+            </sc-if>
+          </sc-for>
+          <sc-if value="{{ thinking }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono',monospace; font-size:11px; color:oklch(0.6 0.13 55);"><span style="width:7px; height:7px; border-radius:50%; background:oklch(0.72 0.14 60); animation:pulseDot 1.2s infinite;"></span>裁判正在找接缝…</div>
+          </sc-if>
+        </div>
+
+        <!-- input -->
+        <div style="padding:14px 20px 18px; flex-shrink:0; display:flex; gap:8px; align-items:flex-end; border-top:1px solid #e7e4dd;">
+          <textarea value="{{ chatInput }}" onChange="{{ typeChat }}" onKeyDown="{{ chatKey }}" placeholder="{{ inputPlaceholder }}" style="flex:1; min-height:46px; max-height:130px; resize:none; border:1px solid #e2dfd8; border-radius:12px; padding:12px 14px; font-family:inherit; font-size:13px; line-height:1.6; color:#17161a; background:#fff; outline:none;"></textarea>
+          <button onClick="{{ sendChat }}" style="width:40px; height:40px; border-radius:50%; flex-shrink:0; border:none; cursor:pointer; background:#17161a; color:#fff; font-size:16px; display:flex; align-items:center; justify-content:center;">↑</button>
+        </div>
+
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;panelOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;复习 Agent&quot;}, &quot;weakFirst&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;题目列表&quot;}, &quot;showAnswersInline&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;题目列表&quot;}}">
+class Component extends DCLogic {
+  state = {
+    filterCat: "全部", filterStatus: "全部", expanded: null,
+    ctxId: null, mode: null, thinking: false, chatInput: "",
+    msgs: [{ role: "agent", text: "这里没有观众，练崩了不算数。\n点左侧题目的「选中对答」，我把它载入上下文，直接开考。" }],
+    qs: [
+      { id: 1, cat: "AGENT 架构", q: "ReAct 和 Plan-and-Execute 怎么取舍？什么场景该选哪个？", tags: "ReAct · 规划 · 取舍", source: "美团 · 一面", last: "5 天前", mastery: "solid",
+        points: ["ReAct：边想边做，适合探索型、步骤不可预知的任务；每步都过一次 LLM，延迟和成本高", "Plan-and-Execute：先出计划再执行，适合步骤可预知、可并行的任务；计划错了要有重规划机制", "实际常用混合：粗计划打底 + 每步 ReAct 微调"] },
+      { id: 2, cat: "可靠性", q: "工具调用失败（超时 / 报错 / 幻觉参数）时，重试与降级怎么设计？", tags: "重试 · 熔断 · 降级", source: "字节 · 二面", last: "3 天前", mastery: "partial",
+        points: ["分类处理：超时走指数退避重试；参数校验失败把报错回喂模型重生成；持续失败熔断", "设最大重试次数与总预算闸门，避免死循环烧 token", "降级路径：换备用工具，或直接告知用户做不了——不让模型硬编"] },
+      { id: 3, cat: "上下文 / 记忆", q: "多轮对话历史超出上下文窗口，怎么压缩 / 截断？", tags: "上下文 · 摘要 · 截断", source: "自己踩坑", last: "昨天", mastery: "partial",
+        points: ["保系统提示和最近 N 轮原文，中间轮次做摘要压缩", "工具结果是大头：只留结论行，原文落盘留引用", "截断要落在消息边界上，别切断 tool_call / tool_result 配对"] },
+      { id: 4, cat: "可靠性", q: "工具返回的内容里藏了指令（间接提示注入），怎么防？", tags: "注入 · 安全 · 不可信输入", source: "腾讯 · 二面", last: "1 周前", mastery: "collapsed",
+        points: ["原则：工具结果是数据不是指令——系统提示里显式声明，并用分隔符包裹外部内容", "高危操作（写 / 删 / 支付）走白名单 + 人工确认，绝不因内容里的\u201c指令\u201d触发", "对外部内容做消毒：剥离越权措辞、限制来源域"] },
+      { id: 5, cat: "上下文 / 记忆", q: "Agent 的长期记忆怎么设计？和 RAG 的边界在哪？", tags: "记忆 · RAG · 分层", source: "面经 · 牛客", last: "未复习", mastery: "new",
+        points: ["分层：会话内 scratchpad / 用户级画像 / 全局知识库，写入时机与淘汰策略各不同", "RAG 检索外部知识；记忆沉淀交互产生的事实——写路径（何时记、记什么）才是难点", "记忆要可解释可删除：用户能看到并纠正"] },
+      { id: 6, cat: "评估与观测", q: "怎么评估一个 Agent？任务完成率之外还看什么？", tags: "评估 · judge · 指标", source: "阿里 · 三面", last: "4 天前", mastery: "partial",
+        points: ["过程指标：步数 / 工具成功率 / 重试率 / 回退次数——同样完成，10 步和 3 步不是一个水平", "成本与延迟：每任务 token、P95 延迟", "LLM-as-judge 要定期抽样人工校准，防裁判漂移"] },
+      { id: 7, cat: "工具调用", q: "流式输出中途出现 tool_call，服务端和前端各要处理什么？", tags: "流式 · SSE · tool_call", source: "自己踩坑", last: "2 天前", mastery: "solid",
+        points: ["服务端：增量拼接 arguments 分片，闭合后才执行；执行期间维持 SSE 心跳", "前端：区分文本 delta 和工具状态事件，给\u201c正在查…\u201d的中间态", "一次响应可能有多个 tool_call，按 index 归组"] },
+      { id: 8, cat: "AGENT 架构", q: "什么时候该上多 Agent？消息和状态怎么传？", tags: "多 Agent · 编排 · 状态", source: "面经 · 牛客", last: "未复习", mastery: "new",
+        points: ["先问单 Agent + 好提示能否解决——多 Agent 的收益要盖过通信与调试成本", "传递方式：共享黑板 / 显式消息 / 编排器分发；关键是明确谁拥有状态的写权", "子 Agent 只回摘要不回全量上下文，控成本"] },
+      { id: 9, cat: "工具调用", q: "要稳定拿到结构化输出，json mode、function calling、校验重试各有什么局限？", tags: "结构化 · zod · schema", source: "字节 · 二面", last: "3 天前", mastery: "solid",
+        points: ["json mode 只保证合法 JSON，不保证 schema；复杂嵌套仍会漏字段", "function calling 约束更强，但枚举 / 数值范围照样会错", "兜底：zod/pydantic 校验 + 报错回喂重试 1-2 次，再失败走降级"] },
+      { id: 10, cat: "可靠性", q: "Agent 执行有副作用的操作（下单 / 删除），幂等和确认怎么做？", tags: "幂等 · 副作用 · 确认", source: "美团 · 二面", last: "未复习", mastery: "new",
+        points: ["工具层生成幂等键：同一意图重试不会重复下单", "读写分离：读放开，写走 dry-run + 用户确认两段式", "所有副作用留审计日志，可回放可撤销"] },
+      { id: 11, cat: "评估与观测", q: "Agent 的可观测性：trace 里应该记什么？", tags: "trace · 日志 · 归因", source: "Grill · 内部", last: "5 天前", mastery: "partial",
+        points: ["每次 LLM 调用的完整请求 / 响应、耗时分段（TTFT / 工具往返）、token 与成本", "一次任务串成 trace：轮次 → LLM 调用 → tool 调用的树", "记录 prompt 版本与模型参数，坏 case 才能归因"] },
+      { id: 12, cat: "评估与观测", q: "Agent 循环 token 成本失控，有哪些省钱手段？", tags: "成本 · 缓存 · 路由", source: "面经 · 牛客", last: "未复习", mastery: "new",
+        points: ["历史压缩 + 工具结果截断是大头；prompt caching 命中排第二", "路由：简单步骤用小模型，关键判定才用大模型", "限步数 / 限预算硬闸门，超了降级或求助人工"] },
+      { id: 13, cat: "评估与观测", q: "怎么给 Agent 的 prompt 改动做灰度发布和回滚？", tags: "灰度 · 版本 · 回滚", source: "收集 · 待补答案", last: "未复习", mastery: "new", points: [],
+        draft: ["prompt 与模型参数版本化，改动走 A/B：新版本先切 5-10% 流量", "看护指标：判定分布漂移、schema 失败率、成本 / 延迟——异常自动回滚到上一版本", "留存每版评测集跑分，改动前后可对比"] }
+    ]
+  };
+  componentDidMount() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("grill-qa-bank") || "null");
+      if (saved) this.setState(s => ({ qs: s.qs.map(q => saved[q.id] ? { ...q, mastery: saved[q.id].m, last: saved[q.id].l, points: (saved[q.id].p && saved[q.id].p.length) ? saved[q.id].p : q.points } : q) }));
+    } catch (e) {}
+  }
+  componentDidUpdate() {
+    const el = this.chatRef && this.chatRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+  persist(qs) {
+    const out = {};
+    qs.forEach(q => { out[q.id] = { m: q.mastery, l: q.last, p: q.points }; });
+    try { localStorage.setItem("grill-qa-bank", JSON.stringify(out)); } catch (e) {}
+  }
+  mark(id, m) {
+    this.setState(s => {
+      const qs = s.qs.map(q => q.id === id ? { ...q, mastery: m, last: "刚刚" } : q);
+      this.persist(qs);
+      return { qs };
+    });
+  }
+  push(msg) { this.setState(s => ({ msgs: [...s.msgs, msg] })); }
+  selectQ(id) {
+    const q = this.state.qs.find(x => x.id === id);
+    if (!q || this.state.ctxId === id) return;
+    this.setState(s => ({
+      ctxId: id, mode: "quizzing", expanded: id,
+      msgs: [...s.msgs,
+        { role: "sys", text: "── 载入上下文 · Q" + q.id + " · " + q.cat + " ──" },
+        { role: "agent", text: q.q, isQuestion: true }]
+    }));
+  }
+  judgeAnswer(q, ans) {
+    const terms = p => p.split(/[，、；：。！\s/（）·,+-]+/).filter(t => t.length >= 2);
+    const hit = p => terms(p).some(t => ans.includes(t));
+    const matched = q.points.filter(hit);
+    const vague = (ans.match(/完整|全部|基本上|基本|应该|大概|差不多|肯定|很完善|都做了/) || [])[0];
+    let level, comment;
+    if (matched.length >= 2 && !vague) { level = "solid"; comment = "扛住了。要点覆盖到位，下一题不客气了。"; }
+    else if (matched.length >= 1) { level = "partial"; comment = "方向对，但只答了一半——把漏掉的要点补进你的说法里，再来一遍。"; }
+    else { level = "collapsed"; comment = "崩了不算数，这里没有观众。先把下面的要点变成你自己的话。"; }
+    const seam = vague
+      ? "接缝：\u201c" + vague + "\u201d没有落点——删掉它，换成具体机制或数字"
+      : (level === "solid" ? "没摸到明显接缝，正式版裁判会追问更深" : "接缝：关键机制没出现，裁判没找到落点");
+    const missed = q.points.filter(p => !hit(p)).slice(0, 3);
+    return { level, text: "└─ " + seam + "\n" + comment + (missed.length ? "\n\n漏掉的要点：\n" + missed.map(p => "· " + p).join("\n") : "") };
+  }
+  sendChat() {
+    const ans = this.state.chatInput.trim();
+    if (!ans || this.state.thinking) return;
+    this.push({ role: "user", text: ans });
+    this.setState({ chatInput: "" });
+    const q = this.state.qs.find(x => x.id === this.state.ctxId);
+    if (this.state.mode === "quizzing" && q && q.points.length) {
+      this.setState({ thinking: true });
+      setTimeout(() => {
+        const v = this.judgeAnswer(q, ans);
+        this.mark(q.id, v.level);
+        this.setState({ thinking: false });
+        this.push({ role: "agent", text: v.text, verdict: v.level });
+      }, 900);
+      return;
+    }
+    if (this.state.mode === "quizzing" && q && !q.points.length) {
+      this.setState({ thinking: true });
+      setTimeout(() => {
+        const draft = q.draft || ["（原型占位）正式版由 LLM 结合你的回答起草 3-5 条工程视角要点"];
+        this.setState(s => {
+          const qs = s.qs.map(x => x.id === q.id ? { ...x, points: draft } : x);
+          this.persist(qs);
+          return { qs, thinking: false };
+        });
+        this.push({ role: "agent", text: "这题还没有基准答案，先不判定。我起草了一版要点，已存入题库（左侧可再编辑），对照看看你漏了什么：\n" + draft.map(p => "· " + p).join("\n") });
+      }, 900);
+      return;
+    }
+    this.setState({ thinking: true });
+    setTimeout(() => {
+      this.setState({ thinking: false });
+      this.push({ role: "agent", text: "先在左侧「选中对答」载入一道题——有上下文我才judge得准。" });
+    }, 700);
+  }
+  renderVals() {
+    const st = this.state;
+    if (!this.chatRef) this.chatRef = React.createRef();
+    const M = {
+      solid: { label: "已掌握", color: "oklch(0.5 0.13 155)", dot: "oklch(0.68 0.13 155)" },
+      partial: { label: "半懂", color: "oklch(0.6 0.13 55)", dot: "oklch(0.72 0.14 60)" },
+      collapsed: { label: "崩过", color: "oklch(0.6 0.18 25)", dot: "oklch(0.72 0.19 25)" },
+      new: { label: "未复习", color: "#8a8690", dot: "#c9c5bd" }
+    };
+    const chip = (on, dark) => on
+      ? (dark ? { background: "#17161a", color: "#fff", borderRadius: "8px", padding: "5px 12px", fontWeight: 600, cursor: "pointer" }
+              : { background: "oklch(0.95 0.03 285)", color: "oklch(0.45 0.14 285)", borderRadius: "8px", padding: "5px 12px", fontWeight: 700, cursor: "pointer" })
+      : { border: "1px solid #e2dfd8", borderRadius: "8px", padding: "5px 12px", color: "#8a8690", fontWeight: 600, cursor: "pointer" };
+    const catNames = ["全部", ...Array.from(new Set(st.qs.map(q => q.cat)))];
+    const cats = catNames.map(name => ({ name, pick: () => this.setState({ filterCat: name }), style: chip(st.filterCat === name, true) }));
+    const statuses = ["全部", "待复习", "已掌握"].map(name => ({ name, pick: () => this.setState({ filterStatus: name }), style: chip(st.filterStatus === name, false) }));
+    const weakFirst = this.props.weakFirst ?? true;
+    const showInline = this.props.showAnswersInline ?? false;
+    const order = { collapsed: 0, new: 1, partial: 2, solid: 3 };
+    let list = st.qs.filter(q =>
+      (st.filterCat === "全部" || q.cat === st.filterCat) &&
+      (st.filterStatus === "全部" || (st.filterStatus === "已掌握" ? q.mastery === "solid" : q.mastery !== "solid")));
+    if (weakFirst) list = [...list].sort((a, b) => order[a.mastery] - order[b.mastery]);
+    const rows = list.map(q => {
+      const open = showInline || st.expanded === q.id;
+      const m = M[q.mastery];
+      const isCtx = st.ctxId === q.id;
+      return {
+        ...q, isOpen: open, noAnswer: !q.points.length,
+        masteryLabel: m.label,
+        toggle: () => this.setState({ expanded: st.expanded === q.id ? null : q.id }),
+        select: e => { e.stopPropagation(); this.selectQ(q.id); },
+        selectLabel: isCtx ? "已选中" : "选中对答",
+        selectStyle: isCtx
+          ? { flexShrink: 0, fontFamily: "inherit", fontSize: "11.5px", fontWeight: 700, padding: "5px 12px", borderRadius: "8px", cursor: "default", background: "oklch(0.52 0.16 285)", border: "1px solid oklch(0.52 0.16 285)", color: "#fff" }
+          : { flexShrink: 0, fontFamily: "inherit", fontSize: "11.5px", fontWeight: 700, padding: "5px 12px", borderRadius: "8px", cursor: "pointer", background: "#fff", border: "1px solid oklch(0.75 0.08 285)", color: "oklch(0.45 0.14 285)" },
+        markSolid: e => { e.stopPropagation(); this.mark(q.id, "solid"); },
+        markPartial: e => { e.stopPropagation(); this.mark(q.id, "partial"); },
+        markCollapsed: e => { e.stopPropagation(); this.mark(q.id, "collapsed"); },
+        rowStyle: {
+          display: "flex", flexDirection: "column", gap: "8px", padding: "16px 28px",
+          borderBottom: "1px solid #edebe6", cursor: "pointer",
+          background: open || isCtx ? "#f6f4f0" : "transparent",
+          borderLeft: isCtx ? "3px solid oklch(0.52 0.16 285)" : "3px solid transparent"
+        },
+        dotStyle: q.mastery === "new"
+          ? { flexShrink: 0, width: "9px", height: "9px", borderRadius: "50%", border: "1.5px dashed #b4b1ab", background: "transparent" }
+          : { flexShrink: 0, width: "10px", height: "10px", borderRadius: "50%", background: m.dot },
+        masteryStyle: { fontFamily: "'JetBrains Mono',monospace", fontSize: "10.5px", fontWeight: 700, color: m.color }
+      };
+    });
+    const n = k => st.qs.filter(q => q.mastery === k).length;
+    const total = st.qs.length;
+    const nSolid = n("solid");
+    const ctx = st.qs.find(q => q.id === st.ctxId);
+    const chipBg = { solid: "oklch(0.68 0.13 155)", partial: "oklch(0.72 0.14 60)", collapsed: "oklch(0.72 0.19 25)" };
+    const msgs = st.msgs.map((m, i) => ({
+      key: i, text: m.text,
+      isSys: m.role === "sys", isAgent: m.role === "agent", isUser: m.role === "user",
+      isQuestion: !!m.isQuestion, isPlain: m.role === "agent" && !m.isQuestion,
+      verdict: m.verdict ? ({ solid: "SOLID", partial: "PARTIAL", collapsed: "COLLAPSED" })[m.verdict] : null,
+      chipStyle: m.verdict ? { fontFamily: "'JetBrains Mono',monospace", fontSize: "10px", fontWeight: 700, color: "#fff", background: chipBg[m.verdict], padding: "2px 8px", borderRadius: "6px" } : {}
+    }));
+    return {
+      cats, statuses, rows, stop: e => e.stopPropagation(),
+      total, nSolid, dueCount: total - nSolid, shownCount: rows.length,
+      panelOpen: this.props.panelOpen ?? true,
+      msgs, thinking: st.thinking, chatRef: this.chatRef,
+      ctxLabel: ctx ? ("Q" + ctx.id + " · " + (ctx.q.length > 16 ? ctx.q.slice(0, 16) + "…" : ctx.q)) : "未载入 · 在左侧选中一题",
+      ctxChipStyle: ctx
+        ? { fontSize: "11.5px", fontWeight: 700, color: "oklch(0.45 0.14 285)", background: "oklch(0.95 0.03 285)", borderRadius: "7px", padding: "4px 10px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }
+        : { fontSize: "11.5px", fontWeight: 600, color: "#b4b1ab", border: "1px dashed #d4d0c8", borderRadius: "7px", padding: "4px 10px" },
+      chatInput: st.chatInput,
+      typeChat: e => this.setState({ chatInput: e.target.value }),
+      chatKey: e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); this.sendChat(); } },
+      sendChat: () => this.sendChat(),
+      inputPlaceholder: ctx ? "开口说，别背书——写下你的回答" : "先在左侧选中一题"
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #fbfaf8; font-family: "Manrope","Noto Sans SC",sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #17161a; text-decoration: none; }
+  a:hover { opacity: 0.75; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+</style>
+</helmet>
+
+<div style="display:flex; flex-direction:column; height:100vh; min-height:720px; color:#17161a;">
+
+  <!-- top bar -->
+  <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 28px; border-bottom:1px solid #edebe6; background:#fbfaf8; flex-shrink:0;">
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:700; letter-spacing:3px;">GRILL<span style="color:oklch(0.52 0.16 285);">//DEV</span></span>
+      <span style="width:1px; height:16px; background:#ddd9d2;"></span>
+      <span style="font-size:13.5px; font-weight:700;">LLM 请求日志</span>
+      <span style="font-size:12px; color:#b4b1ab;">仅开发环境</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:20px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a8690;">
+      <span><b style="color:#17161a;">47</b> 次调用</span>
+      <span><b style="color:#17161a;">38.2k</b> tok</span>
+      <span><b style="color:#17161a;">¥0.42</b></span>
+      <span style="color:oklch(0.6 0.18 25);"><b>2</b> 失败</span>
+      <span style="display:flex; align-items:center; gap:6px; color:oklch(0.5 0.13 155);"><span style="width:7px; height:7px; border-radius:50%; background:oklch(0.68 0.13 155); animation:pulseDot 1.4s infinite;"></span>live</span>
+    </div>
+  </div>
+
+  <!-- filter row -->
+  <div style="display:flex; align-items:center; gap:8px; padding:10px 28px; border-bottom:1px solid #edebe6; flex-shrink:0; font-size:12px;">
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; margin-right:4px;">场次</span>
+    <span style="background:#17161a; color:#fff; border-radius:8px; padding:5px 12px; font-weight:600;">session_003</span>
+    <span style="border:1px solid #e2dfd8; border-radius:8px; padding:5px 12px; color:#8a8690; font-weight:600;">session_002</span>
+    <span style="border:1px solid #e2dfd8; border-radius:8px; padding:5px 12px; color:#8a8690; font-weight:600;">preprocess</span>
+    <span style="width:1px; height:16px; background:#e2dfd8; margin:0 8px;"></span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; margin-right:4px;">AGENT</span>
+    <span style="background:oklch(0.95 0.03 285); color:oklch(0.45 0.14 285); border-radius:8px; padding:5px 12px; font-weight:700;">全部</span>
+    <span style="border:1px solid #e2dfd8; border-radius:8px; padding:5px 12px; color:#8a8690; font-weight:600;">面试官</span>
+    <span style="border:1px solid #e2dfd8; border-radius:8px; padding:5px 12px; color:#8a8690; font-weight:600;">裁判</span>
+    <span style="border:1px solid #e2dfd8; border-radius:8px; padding:5px 12px; color:#8a8690; font-weight:600;">仅失败</span>
+    <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:#b4b1ab;">deepseek-chat · temp 0.7</span>
+  </div>
+
+  <div style="flex:1; display:flex; min-height:0;">
+
+    <!-- request list -->
+    <div style="width:400px; flex-shrink:0; border-right:1px solid #edebe6; overflow-y:auto; background:#f6f4f0;">
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+        <div onClick="{{ r.select }}" style="{{ r.rowStyle }}">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="{{ r.badgeStyle }}">{{ r.agent }}</span>
+            <span style="font-size:13px; font-weight:700; color:#17161a;">{{ r.title }}</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#b4b1ab; margin-left:auto;">{{ r.time }}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a8690;">
+            <span>{{ r.latency }}</span>
+            <span>{{ r.tokens }}</span>
+            <sc-if value="{{ r.tools }}" hint-placeholder-val="{{ false }}"><span style="color:oklch(0.45 0.14 285);">⚒ {{ r.tools }} tool</span></sc-if>
+            <span style="{{ r.statusStyle }}">{{ r.status }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- detail -->
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow-y:auto;">
+
+      <!-- detail header -->
+      <div style="padding:22px 32px 0; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; letter-spacing:1px; color:#b4b1ab;">req_a81f · R3 · 裁判判定</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; color:#fff; background:oklch(0.72 0.14 60); padding:3px 9px; border-radius:6px;">PARTIAL</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; color:oklch(0.5 0.13 155); border:1px solid oklch(0.8 0.08 155); padding:3px 9px; border-radius:6px;">✓ zod 通过</span>
+          <span style="margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:11px; color:#8a8690;">deepseek-chat · 2026-07-19 14:02:31</span>
+        </div>
+        <!-- timing breakdown -->
+        <div style="display:flex; flex-direction:column; gap:6px; margin-top:16px;">
+          <div style="display:flex; height:10px; border-radius:5px; overflow:hidden; background:#eceae4;">
+            <div style="width:6%; background:#d4d0c8;" title="排队"></div>
+            <div style="width:24%; background:oklch(0.52 0.16 285);" title="首 token"></div>
+            <div style="width:18%; background:oklch(0.72 0.12 285);" title="生成"></div>
+            <div style="width:14%; background:oklch(0.72 0.14 60);" title="tool: read_file"></div>
+            <div style="width:20%; background:oklch(0.72 0.12 285);" title="生成"></div>
+            <div style="width:12%; background:oklch(0.72 0.14 60);" title="tool: read_file"></div>
+            <div style="width:6%; background:oklch(0.72 0.12 285);" title="生成"></div>
+          </div>
+          <div style="display:flex; gap:18px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#8a8690;">
+            <span>总 <b style="color:#17161a;">3.42s</b></span>
+            <span>TTFT <b style="color:#17161a;">0.81s</b></span>
+            <span><span style="display:inline-block; width:8px; height:8px; border-radius:2px; background:oklch(0.72 0.14 60); margin-right:4px;"></span>工具 2 次 · 0.9s</span>
+            <span>in <b style="color:#17161a;">3,214</b> tok</span>
+            <span>out <b style="color:#17161a;">486</b> tok</span>
+            <span>¥0.011</span>
+          </div>
+        </div>
+        <!-- tabs -->
+        <div style="display:flex; gap:4px; margin-top:20px; border-bottom:1px solid #edebe6;">
+          <button onClick="{{ goReq }}" style="{{ reqTabStyle }}">请求 Request</button>
+          <button onClick="{{ goRes }}" style="{{ resTabStyle }}">响应 Response</button>
+          <button onClick="{{ goTrace }}" style="{{ traceTabStyle }}">工具往返 ⚒ 2</button>
+        </div>
+      </div>
+
+      <!-- tab: request -->
+      <sc-if value="{{ isReq }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:24px 32px 40px; display:flex; flex-direction:column; gap:14px;">
+
+          <div style="display:flex; align-items:center; gap:14px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a8690; background:#f6f4f0; border:1px solid #edebe6; border-radius:10px; padding:10px 16px;">
+            <span style="color:#17161a; font-weight:700;">POST</span>
+            <span>api.deepseek.com/v1/chat/completions</span>
+            <span style="margin-left:auto;">temp 0.7 · stream · json_object · tools: read_file</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">MESSAGES[0] · SYSTEM</span>
+              <span style="font-size:11px; color:#b4b1ab;">1,842 tok · 折叠</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:oklch(0.45 0.14 285); cursor:pointer;">展开 ▾</span>
+            </div>
+            <div style="background:#f6f4f0; border:1px solid #edebe6; border-radius:10px; padding:12px 16px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#8a8690; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">你是一名代码压力测试裁判。你的 KPI 不是抓造假，而是找出用户说法里最脆弱的接缝… <span style="color:#b4b1ab;">(+ 轻档案 light-profile.json)</span></div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">MESSAGES[1..5] · 对话历史</span>
+              <span style="font-size:11px; color:#b4b1ab;">R1–R2 · 1,204 tok · 折叠</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:oklch(0.45 0.14 285); cursor:pointer;">展开 ▾</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">MESSAGES[6] · USER · 本轮回答</span>
+            <div style="background:#fff; border:1px solid #edebe6; border-radius:10px; padding:14px 16px; font-size:13.5px; line-height:1.7; color:#54515c;">我们做了完整的断线重连和<mark style="background:oklch(0.93 0.06 60); padding:1px 4px; border-radius:4px; font-weight:600; color:#17161a;">消息补偿</mark>，断了之后会自动重连，把丢的那部分补回来，用户基本无感。</div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">请求体 · RAW</span>
+            <div style="background:#17161a; border-radius:10px; padding:16px 18px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.85; color:#8a8696;">
+              <div>{ <span style="color:oklch(0.72 0.12 285);">"model"</span>: "deepseek-chat", <span style="color:oklch(0.72 0.12 285);">"temperature"</span>: 0.7, <span style="color:oklch(0.72 0.12 285);">"stream"</span>: true,</div>
+              <div>  <span style="color:oklch(0.72 0.12 285);">"messages"</span>: [ …7 条 ],</div>
+              <div>  <span style="color:oklch(0.72 0.12 285);">"tools"</span>: [ { "function": { "name": "read_file", "parameters": { "path": "string" } } } ],</div>
+              <div>  <span style="color:oklch(0.72 0.12 285);">"response_format"</span>: { "type": "json_object" } }</div>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- tab: response -->
+      <sc-if value="{{ isRes }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px 40px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; align-items:center; gap:14px; font-family:'JetBrains Mono',monospace; font-size:11.5px; color:#8a8690; background:#f6f4f0; border:1px solid #edebe6; border-radius:10px; padding:10px 16px;">
+            <span style="color:oklch(0.5 0.13 155); font-weight:700;">200 OK</span>
+            <span>3.42s · TTFT 0.81s</span>
+            <span style="margin-left:auto;">usage: prompt 3,214 · completion 486 · ¥0.011</span>
+          </div>
+          <div style="display:flex; gap:14px;">
+            <div style="flex:1; background:#fff; border:1px solid #edebe6; border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:4px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">robustness</span>
+              <span style="font-family:'Noto Serif SC',serif; font-size:20px; font-weight:700; color:oklch(0.55 0.13 55);">partial</span>
+            </div>
+            <div style="flex:1; background:#fff; border:1px solid #edebe6; border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:4px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">did_drill</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:oklch(0.5 0.13 155);">true · 2 files</span>
+            </div>
+            <div style="flex:1; background:#fff; border:1px solid #edebe6; border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:4px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab;">schema</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:oklch(0.5 0.13 155);">✓ 1 次通过</span>
+            </div>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700; letter-spacing:1.5px; color:#b4b1ab; margin-top:4px;">ASSISTANT 消息体 · 解析后的 JudgeOutput</span>
+          <div style="background:#17161a; border-radius:12px; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.9; color:#c9c5d2; margin-top:-6px;">
+            <div>{</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"robustness"</span>: <span style="color:oklch(0.78 0.13 60);">"partial"</span>,</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"collapse_point"</span>: <span style="color:#8a8696;">"补偿机制无代码落点：重连存在，断点续传/去重缺失"</span>,</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"did_drill"</span>: <span style="color:oklch(0.7 0.13 155);">true</span>,</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"drilled_files"</span>: [<span style="color:#8a8696;">"src/stream/parser.ts", "api/stream_handler.py"</span>],</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"next_probe"</span>: <span style="color:#8a8696;">"丢失如何感知、从哪个 offset 重发"</span>,</div>
+            <div>  <span style="color:oklch(0.72 0.12 285);">"reasoning"</span>: <span style="color:#8a8696;">"用户使用'完整的'一词，但代码仅覆盖重连路径…"</span></div>
+            <div>}</div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- tab: tool trace -->
+      <sc-if value="{{ isTrace }}" hint-placeholder-val="{{ false }}">
+        <div style="padding:24px 32px 40px; display:flex; flex-direction:column; gap:14px;">
+          <span style="font-size:12.5px; color:#8a8690;">同一次请求内，模型在流式生成中发起的 <b style="color:#17161a;">2 次 read_file 往返</b>（裁判下钻）：</span>
+          <div style="background:#17161a; border-radius:12px; padding:16px 18px; font-family:'JetBrains Mono',monospace; font-size:11.5px; line-height:1.95; color:#8a8696;">
+            <div style="color:#5c5966;">// round-trip 1 · +0.9s</div>
+            <div><span style="color:oklch(0.78 0.13 60);">← tool_call</span>  read_file { "path": "src/stream/parser.ts" }</div>
+            <div><span style="color:oklch(0.7 0.13 155);">→ tool_result</span>  4.1 KB · 0.4s <span style="color:#5c5966;">· reconnect() 存在，offset/去重未出现</span></div>
+            <div style="margin-top:8px; color:#5c5966;">// round-trip 2 · +2.1s</div>
+            <div><span style="color:oklch(0.78 0.13 60);">← tool_call</span>  read_file { "path": "api/stream_handler.py" }</div>
+            <div><span style="color:oklch(0.7 0.13 155);">→ tool_result</span>  2.8 KB · 0.5s <span style="color:#5c5966;">· SSE 分块输出，无断点标记字段</span></div>
+          </div>
+          <span style="font-size:11.5px; color:#b4b1ab;">路径已限制在两个仓根内（模型输出属不可信输入）。</span>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;defaultTab&quot;: {&quot;editor&quot;: null, &quot;default&quot;: &quot;msgs&quot;, &quot;tsType&quot;: &quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { tab: "req", selected: 0 };
+  renderVals() {
+    const t = this.state.tab;
+    const tabBase = { border: "none", background: "transparent", fontFamily: "inherit", fontSize: "13px", fontWeight: 700, padding: "10px 16px", cursor: "pointer", borderBottom: "2px solid transparent", color: "#8a8690" };
+    const tabOn = { ...tabBase, color: "#17161a", borderBottom: "2px solid oklch(0.52 0.16 285)" };
+    const data = [
+      { agent: "判", title: "裁判判定 R3", time: "14:02:31", latency: "3.42s", tokens: "3.7k tok", tools: 2, status: "partial", kind: "amber" },
+      { agent: "面", title: "面试官追问 R3", time: "14:02:18", latency: "1.18s", tokens: "1.4k tok", tools: 0, status: "ok", kind: "ok" },
+      { agent: "判", title: "裁判判定 R2 · 重试", time: "14:01:55", latency: "2.96s", tokens: "3.1k tok", tools: 1, status: "partial", kind: "amber" },
+      { agent: "判", title: "裁判判定 R2", time: "14:01:41", latency: "2.30s", tokens: "2.9k tok", tools: 1, status: "✗ schema", kind: "err" },
+      { agent: "面", title: "面试官追问 R2", time: "14:01:12", latency: "1.05s", tokens: "1.2k tok", tools: 0, status: "ok", kind: "ok" },
+      { agent: "判", title: "裁判判定 R1", time: "14:00:48", latency: "1.87s", tokens: "2.6k tok", tools: 0, status: "solid", kind: "solid" },
+      { agent: "面", title: "面试官开场 R1", time: "14:00:21", latency: "1.31s", tokens: "1.1k tok", tools: 0, status: "ok", kind: "ok" },
+      { agent: "预", title: "模块职责 · parser.ts", time: "13:52:02", latency: "0.92s", tokens: "0.8k tok", tools: 0, status: "ok", kind: "ok" }
+    ];
+    const badgeColor = { "判": "oklch(0.72 0.14 60)", "面": "oklch(0.52 0.16 285)", "预": "#8a8690" };
+    const statusColor = { ok: "oklch(0.5 0.13 155)", solid: "oklch(0.5 0.13 155)", amber: "oklch(0.6 0.13 55)", err: "oklch(0.6 0.18 25)" };
+    const rows = data.map((d, i) => ({
+      ...d,
+      select: () => this.setState({ selected: i }),
+      rowStyle: {
+        display: "flex", flexDirection: "column", gap: "7px", padding: "13px 18px",
+        borderBottom: "1px solid #edebe6", cursor: "pointer",
+        background: i === this.state.selected ? "#fff" : "transparent",
+        borderLeft: i === this.state.selected ? "3px solid oklch(0.52 0.16 285)" : "3px solid transparent"
+      },
+      badgeStyle: { flexShrink: 0, width: "22px", height: "22px", borderRadius: "7px", background: badgeColor[d.agent], color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700 },
+      statusStyle: { marginLeft: "auto", fontWeight: 700, color: statusColor[d.kind] }
+    }));
+    return {
+      rows,
+      isReq: t === "req", isRes: t === "res", isTrace: t === "trace",
+      goReq: () => this.setState({ tab: "req" }),
+      goRes: () => this.setState({ tab: "res" }),
+      goTrace: () => this.setState({ tab: "trace" }),
+      reqTabStyle: t === "req" ? tabOn : tabBase,
+      resTabStyle: t === "res" ? tabOn : tabBase,
+      traceTabStyle: t === "trace" ? tabOn : tabBase
+    };
+  }
+}
+</script>
+</body>
+</html>
