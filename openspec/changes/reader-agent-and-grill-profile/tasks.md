@@ -1,10 +1,10 @@
 ## 1. Schema 与 CLI 契约改造
 
-- [ ] 1.1 用 Zod 定义新的 metadata schema(project_name / repos / links / entrypoints / open_questions / contradictions / failed_batches)并导出类型
-- [ ] 1.2 把 `links` 从必填的前后端二元关系改为可选的 n 元关系(repos[] + relation + source: user|inferred),新增自由文本 description
-- [ ] 1.3 定义分批笔记的 Zod schema(modules / open_questions / uncertain)
-- [ ] 1.4 CLI 参数改造:仓库列表 + 简历文件 + JD 文件 + 可选关系配置 + `--out` 输出目录
-- [ ] 1.5 校验简历与 JD 文件存在,缺失时以非零退出码报错
+- [x] 1.1 用 Zod 定义新的 metadata schema(project_name / repos / links / entrypoints / open_questions / contradictions / failed_batches)并导出类型
+- [x] 1.2 把 `links` 从必填的前后端二元关系改为可选的 n 元关系(repos[] + relation + source: user|inferred),新增自由文本 description
+- [x] 1.3 定义分批笔记的 Zod schema(modules / open_questions / uncertain)
+- [x] 1.4 CLI 参数改造:仓库列表 + 简历文件 + JD 文件 + 可选关系配置 + `--out` 输出目录
+- [x] 1.5 校验简历与 JD 文件存在,缺失时以非零退出码报错
 
 ## 2. 扫描与证据收集(S0 / S1)
 
