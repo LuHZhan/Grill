@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { LightProfileSchema, type LightProfile, type Repo } from './schema.js';
 import { scanRepo, assertRepoDir, type ScanResult } from './tree.js';
-import { pickKeyModules, buildModules } from './modules.js';
+import { pickKeyModules, buildModules, ROLE_PLACEHOLDER } from './modules.js';
 import { readLinksConfig, validateLinks } from './links.js';
 
 const USAGE = `用法:
@@ -51,6 +51,13 @@ async function main(): Promise<void> {
     process.exit(values.help ? 0 : 1);
   }
 
+  if (!process.env.DEEPSEEK_API_KEY) {
+    throw new Error(
+      '缺少环境变量 DEEPSEEK_API_KEY —— 没有它所有模块职责都会是占位值。\n' +
+        '  PowerShell: $env:DEEPSEEK_API_KEY = "sk-..."',
+    );
+  }
+
   const frontendRoot = resolve(values.frontend);
   const backendRoot = resolve(values.backend);
   assertRepoDir('前端仓', frontendRoot);
@@ -94,6 +101,17 @@ async function main(): Promise<void> {
     );
   }
 
+  // 职责生成的总体成败:全军覆没通常是配置问题,不能当"局部降级"报成功
+  const allModules = [...frontend.modules, ...backend.modules];
+  const failed = allModules.filter((m) => m.role === ROLE_PLACEHOLDER).length;
+  if (allModules.length > 0 && failed === allModules.length) {
+    throw new Error(
+      `全部 ${allModules.length} 个模块的职责生成都失败了,不落盘。\n` +
+        '  这通常是配置问题(API key 无效、余额不足、网络不通),而非个别模块抖动。\n' +
+        '  请查看上方各条 [警告] 的具体原因。',
+    );
+  }
+
   const outPath = resolve(values.out!);
   mkdirSync(dirname(outPath), { recursive: true });
   const json = JSON.stringify(validated.data, null, 2);
@@ -102,6 +120,11 @@ async function main(): Promise<void> {
   const kb = (Buffer.byteLength(json, 'utf8') / 1024).toFixed(1);
   console.log(`\n轻档案已落盘:${outPath}`);
   console.log(`体积:${kb} KB;链路 ${links.length} 条`);
+  console.log(
+    failed > 0
+      ? `模块职责:${allModules.length - failed}/${allModules.length} 生成成功,${failed} 个为占位值`
+      : `模块职责:${allModules.length}/${allModules.length} 全部生成成功`,
+  );
 }
 
 main().catch((err: unknown) => {

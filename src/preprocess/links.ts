@@ -46,7 +46,10 @@ export function validateLinks(
     if (!frontend.has(link.frontend)) missing.push(`前端 ${link.frontend}`);
     if (!backend.has(link.backend)) missing.push(`后端 ${link.backend}`);
     if (missing.length > 0) {
-      warn(`链路「${link.desc}」引用的路径在仓库中不存在,已跳过:${missing.join('、')}`);
+      warn(
+        `链路「${link.desc}」的路径未出现在扫描结果中,已跳过:${missing.join('、')}` +
+          `(可能是路径写错,也可能是该文件被忽略规则排除,如位于 node_modules/tests/ 或隐藏目录下)`,
+      );
       return false;
     }
     return true;

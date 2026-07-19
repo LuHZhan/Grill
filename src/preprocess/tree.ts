@@ -8,6 +8,7 @@ import { join } from 'node:path';
 export const IGNORED_DIRS = new Set([
   'node_modules',
   'dist',
+  'dist-electron',
   'build',
   'out',
   'coverage',
@@ -27,6 +28,22 @@ const IGNORED_FILE_EXT = new Set([
   '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.webp',
   '.woff', '.woff2', '.ttf', '.eot',
   '.lock', '.log', '.map',
+  // 样式对"项目做了什么、怎么做的"零信息量 —— 用了什么 CSS 方案从依赖清单就能看出
+  '.css', '.scss', '.sass', '.less',
+]);
+
+/**
+ * 按**文件名**忽略的锁文件(小写匹配)。
+ * `.lock` 后缀的(yarn.lock/Cargo.lock/poetry.lock)已由 IGNORED_FILE_EXT 覆盖,
+ * 这里补的是后缀伪装成源码的那批 —— pnpm-lock.yaml 是 `.yaml`、
+ * package-lock.json 是 `.json`,曾漏掉近 500 KB 纯噪声。
+ */
+const IGNORED_FILE_NAMES = new Set([
+  'package-lock.json',
+  'npm-shrinkwrap.json',
+  'pnpm-lock.yaml',
+  'bun.lockb',
+  'go.sum',
 ]);
 
 export interface ScanResult {
@@ -56,13 +73,18 @@ function isIgnoredDir(name: string): boolean {
 
 function isIgnoredFile(name: string): boolean {
   if (name.startsWith('.')) return true;
+  if (IGNORED_FILE_NAMES.has(name.toLowerCase())) return true;
   const dot = name.lastIndexOf('.');
-  return dot > 0 && IGNORED_FILE_EXT.has(name.slice(dot));
+  return dot > 0 && IGNORED_FILE_EXT.has(name.slice(dot).toLowerCase());
 }
 
 /**
  * 扫描仓库,输出精简目录树与文件清单。
- * maxDepth 之外的层级折叠为 `.../`,避免深层目录把轻档案撑爆。
+ *
+ * maxDepth 只影响**目录树的渲染**(超深层折叠为 `.../`,避免撑爆轻档案),
+ * 不影响 `files` 的**采集** —— 全深度收集。两者必须分开:
+ * files 是链路校验与关键模块识别的依据,少收一个文件会让用户手写的
+ * 链路被误报"仓库中不存在",而那恰恰是裁判最该拿到的弹药。
  */
 export function scanRepo(root: string, maxDepth = 6): ScanResult {
   const lines: string[] = [];
@@ -76,17 +98,19 @@ export function scanRepo(root: string, maxDepth = 6): ScanResult {
       return; // 读不动的目录(权限等)直接跳过,不阻断整体扫描
     }
 
+    const rendering = depth <= maxDepth;
+
     for (const entry of entries) {
       const rel = relDir ? `${relDir}/${entry.name}` : entry.name;
       if (!entry.isDir) {
-        lines.push(`${indent}${entry.name}`);
         files.push(rel);
+        if (rendering) lines.push(`${indent}${entry.name}`);
         continue;
       }
-      lines.push(`${indent}${entry.name}/`);
-      if (depth + 1 > maxDepth) {
-        lines.push(`${indent}  .../`);
-        continue;
+      if (rendering) {
+        lines.push(`${indent}${entry.name}/`);
+        // 子层已超出渲染深度:树里折叠成 `.../`,但仍继续递归采集 files
+        if (depth + 1 > maxDepth) lines.push(`${indent}  .../`);
       }
       walk(join(dir, entry.name), rel, depth + 1, `${indent}  `);
     }
