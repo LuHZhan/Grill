@@ -1,5 +1,8 @@
-import { describe, expect, test } from 'vitest';
-import { parseCliArgs } from '../../src/reader/cli.js';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { parseCliArgs, assertReadableFile } from '../../src/reader/cli.js';
 
 const base = [
   '--repo', 'G:/x/frontend',
@@ -44,5 +47,28 @@ describe('parseCliArgs —— 仓库列表 + 简历 + JD + 可选关系配置 + 
 
   test('缺少 JD 时报错并点名', () => {
     expect(() => parseCliArgs(['--repo', 'G:/x', '--resume', 'r.md'])).toThrow(/JD/);
+  });
+});
+
+describe('assertReadableFile —— 简历/JD 文件存在性(7.5 / spec:文件不存在报错退出)', () => {
+  let dir: string;
+  let realFile: string;
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'grill-cli-'));
+    realFile = join(dir, 'resume.md');
+    writeFileSync(realFile, '简历内容');
+  });
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  test('文件存在时通过', () => {
+    expect(() => assertReadableFile('简历履历', realFile)).not.toThrow();
+  });
+
+  test('文件不存在时报错并点名是哪一份', () => {
+    expect(() => assertReadableFile('简历履历', join(dir, 'nope.md'))).toThrow(/简历履历.*不存在/);
+  });
+
+  test('路径是目录而非文件时报错', () => {
+    expect(() => assertReadableFile('岗位 JD', dir)).toThrow(/JD.*不是文件/);
   });
 });

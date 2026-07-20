@@ -1,0 +1,72 @@
+{
+  "project_name": "WhatIf",
+  "repos": [
+    {
+      "name": "frontend",
+      "path": "E:\\Lu\\WhatIf\\frontend",
+      "tree": "electron/\n  main.ts\n  preload.ts\n  sidecar.ts\nsrc/\n  assets/\n    fonts/\n      PressStart2P-OFL.txt\n  components/\n    action-input.tsx\n    background-layers.tsx\n    command-bar.tsx\n    loading-screen.tsx\n    particle-canvas.tsx\n    pixel-logo.tsx\n    save-slots-modal.tsx\n    story-viewport.tsx\n    titlebar.tsx\n  lib/\n    api.ts\n    audio-player.ts\n    config-store.ts\n    hooks.ts\n    i18n.ts\n    use-speech-recognition.ts\n  locales/\n    en.json\n    zh-CN.json\n  pages/\n    gameplay-page.tsx\n    library-page.tsx\n    settings-page.tsx\n    start-page.tsx\n  styles/\n  types/\n    electron.d.ts\n  App.tsx\n  main.tsx\ncomponents.json\nelectron-builder.yml\neslint.config.mjs\nindex.html\npackage.json\npnpm-workspace.yaml\nREADME.md\ntsconfig.app.json\ntsconfig.json\ntsconfig.node.json\nvite.config.ts"
+    },
+    {
+      "name": "backend",
+      "path": "E:\\Lu\\WhatIf\\backend",
+      "tree": "api/\n  routes/\n    __init__.py\n    config.py\n    extraction.py\n    game.py\n    logs.py\n    voice.py\n  __init__.py\n  app.py\n  deps.py\n  schemas.py\n  tts.py\ncore/\n  prompts/\n    json_output_system.txt\n  __init__.py\n  llm.py\n  models.py\npreprocessing/\n  entity_transition/\n    prompts/\n      cross_validation.txt\n      necessity_grading.txt\n      repair.txt\n      transition_annotation.txt\n    __init__.py\n    batch_manager.py\n    cross_validator.py\n    entity_scanner.py\n    field_extractor.py\n    necessity_grader.py\n    repairer.py\n    token_estimator.py\n    transition_annotator.py\n    validators.py\n  lorebook/\n    prompts/\n      lorebook_extraction.txt\n    __init__.py\n    lorebook_extractor.py\n  segmentation/\n    prompts/\n      decision_text_extraction.txt\n      event_extraction.txt\n    __init__.py\n    decision_text_extractor.py\n    event_extractor.py\n    sentence_splitter.py\n    text_cleaner.py\n  __init__.py\n  base.py\nruntime/\n  agents/\n    context_enrichment/\n      prompts/\n        entity.txt\n        l0_recall.txt\n        l1_recall.txt\n      __init__.py\n      agent.py\n      entity_recognizer.py\n      formatters.py\n      history_recall.py\n      l0_recall.py\n      l1_recall.py\n    delta_lifecycle/\n      __init__.py\n      agent.py\n    deviation_guidance/\n      prompts/\n        deviation_analysis.txt\n      __init__.py\n      agent.py\n      deviation_controller.py\n    memory_compression/\n      prompts/\n        l0_compress.txt\n        l1_compress.txt\n      __init__.py\n      agent.py\n      l0_compressor.py\n      l1_compressor.py\n    narrative_generation/\n      orchestrator/\n        prompts/\n          confrontation_input.txt\n          confrontation_system.txt\n          orchestrator_shared.txt\n          resolution_input.txt\n          resolution_system.txt\n          setup_bridge_sections.txt\n          setup_input.txt\n          setup_system.txt\n        __init__.py\n        loop.py\n        phase_config.py\n      writers/\n        __init__.py\n        prompt.txt\n        writer.py\n      __init__.py\n      agent.py\n      writer_bridge.py\n    scene_adaptation/\n      prompts/\n        bridge_planner.txt\n        scene_adapter.txt\n      __init__.py\n      agent.py\n      bridge_planner.py\n      scene_adapter.py\n    __init__.py\n    base.py\n    delta_state.py\n    models.py\n  tools/\n    __init__.py\n    lorebook_query.py\n  world/\n    __init__.py\n    loader.py\n  __init__.py\n  cli.py\n  game_logger.py\n  game.py\nconfig.py\nextract.py\nllm_config.yaml\nplay.py\nrequirements.txt\nserver.py\nwhatif-server.spec"
+    }
+  ],
+  "links": [
+    {
+      "relation": "WorldPkg被GameEngine加载",
+      "repos": [
+        "backend"
+      ],
+      "source": "inferred",
+      "description": "Phase 1输出的WorldPkg（zip）由Phase 2的GameEngine（runtime/game.py）加载，作为游戏世界的初始状态。"
+    },
+    {
+      "relation": "AgentExecutor协调6个Agent",
+      "repos": [
+        "backend"
+      ],
+      "source": "inferred",
+      "description": "AgentExecutor（agents/base.py）通过注册表模式管理NarrativeGenerationAgent、ContextEnrichmentAgent等6个Agent，按需调用。"
+    },
+    {
+      "relation": "前端通过SSE消费后端叙事流",
+      "repos": [
+        "frontend",
+        "backend"
+      ],
+      "source": "inferred",
+      "description": "前端frontend/src/lib/api.ts封装SSE客户端，消费backend/api/routes/game.py的SSE端点（/api/game/action等），接收chunk/audio/state等事件。"
+    },
+    {
+      "relation": "LLM配置热更新影响所有Agent/Extractor",
+      "repos": [
+        "backend"
+      ],
+      "source": "inferred",
+      "description": "PUT /api/config/llm可热更新llm_config.yaml中的配置，影响后续所有LLM调用（包括提取和运行阶段）。"
+    }
+  ],
+  "entrypoints": [
+    "backend/extract.py",
+    "backend/play.py",
+    "backend/api/app.py",
+    "frontend/src/App.tsx"
+  ],
+  "open_questions": [
+    "6个Agent之间的具体调用顺序和协作协议（如谁先执行、如何传递上下文）未在输入中详细描述。",
+    "DeltaLifecycleAgent管理平行时间线的具体机制（如分支创建、合并策略）未说明。",
+    "TTS功能（audio事件）的实现细节和依赖（edge-tts）是否完整集成？"
+  ],
+  "contradictions": [
+    {
+      "claim": "简历/自述提及 Redis",
+      "evidence": "依赖清单与文件清单中均未见 Redis 的痕迹"
+    },
+    {
+      "claim": "简历/自述提及 PostgreSQL",
+      "evidence": "依赖清单与文件清单中均未见 PostgreSQL 的痕迹"
+    }
+  ],
+  "failed_batches": []
+}

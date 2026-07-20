@@ -42,6 +42,6 @@
 - **改造代码**:`src/preprocess/` 现有模块。目录树扫描、忽略清单、路径校验、Zod schema 与 CLI 骨架可复用;`modules.ts` 的逐文件职责生成整体废弃。
 - **新增代码**:阅读者 Agent 定义、`glob`/`grep`/`read_file` 三工具及其仓根内路径校验、`ask_reader` 接口、约定文档的向上遍历收集、分批切分与汇总、`GRILL.md` 渲染。
 - **新增输入**:用户提供的简历履历文件与岗位 JD 文件。
-- **新增依赖**:Mastra(角色与工具注册)——与 `judge-agent-and-eval` 变更共用,先落地者引入。
+- **新增依赖**:无。阅读者 agent 用已有的 AI SDK(`ai@5`)原生 tool-calling(`generateText` + `tools` + `stopWhen`)实现,不引 Mastra —— 阅读者是无状态一问一答,用不上 Mastra 的 workflow/memory,且 Mastra↔ai@5 兼容性有风险(见 design 决策 12)。`judge-agent-and-eval` 若确有 agent 框架需求,可在其变更内自行评估。
 - **产出契约变更**:下游 `judge-agent-and-eval` 消费的不再是 `LightProfile` JSON,而是 `GRILL.md` + `profile.json`;裁判的 `read_file` 工具须替换为 `ask_reader`。该变更需在本变更定稿后同步修订。
 - **成本**:分批精读对 WhatIf 双仓约 150K token 输入、5 批调用,`notes/` 缓存使重跑汇总阶段不必重付精读成本。

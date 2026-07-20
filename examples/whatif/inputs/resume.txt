@@ -1,0 +1,12 @@
+【示例简历 —— 合成占位数据,仅用于演示阅读者管道】
+
+姓名:示例候选人
+方向:AI 应用全栈工程师
+
+项目经历:WhatIf 互动叙事引擎
+- 主导后端开发,用 Python 搭建多 Agent 运行时,负责剧情树生成与对局状态管理
+- 前端用 React + Electron 实现桌面客户端,SSE 流式渲染叙事文本
+- 引入 Redis 做对局状态缓存,用 PostgreSQL 持久化玩家存档
+- 熟悉 LLM 应用工程:Prompt 设计、Agent 编排、流式输出与错误兜底
+
+技能:Python、TypeScript、React、Electron、LLM/Agent 编排、Redis、PostgreSQL

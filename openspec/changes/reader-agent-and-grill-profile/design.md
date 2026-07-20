@@ -70,7 +70,11 @@
 
 **5. 约定文档自被扫描目录向上遍历至文件系统根逐层收集**
 
-- 每层试读 `CLAUDE.md`、`AGENTS.md`、`README.md` 等,读不到即跳过(一次 ENOENT,无成本)。
+- 每层试读约定文档,读不到即跳过(一次 ENOENT,无成本)。
+- 类型不限于 `CLAUDE.md`:覆盖各家 AI 编码工具的规则文件(`CLAUDE.local.md`、`AGENTS.md`、`.cursorrules`、`.clinerules`、`.windsurfrules`,以及嵌套的 `.github/copilot-instructions.md` 与 `.cursor/rules/` 下规则)。参照 Claude Code `/init` 命令 survey 的规则文件清单——它们同样是"人手写的高信号约定",是证据分级第二档该抓的东西。原文与译文见下:
+  > If there are Cursor rules (in .cursor/rules/ or .cursorrules) or Copilot rules (in .github/copilot-instructions.md), make sure to include the important parts.
+  >
+  > 译:如果存在 Cursor 规则(在 .cursor/rules/ 或 .cursorrules 中)或 Copilot 规则(在 .github/copilot-instructions.md 中),务必纳入其中的重要部分。
 - 理由:约定文档常写在 monorepo 根上而非子仓内。扫描 `WhatIf/frontend` 时,`WhatIf/CLAUDE.md` 必须能被看见。
 - 收集后**由根向下**排序注入,让更靠近被扫描目录的约定排在更后面。
 
@@ -85,7 +89,7 @@
 - 判据固定为一句:**删掉这行,下游会不会误判?** 不会就砍。
 - 排除:逐文件清单、构建/测试/lint 命令、代码风格、语言通用常识、材料里没有依据的内容。
 - 保留:跨模块调用契约、架构决策与取舍、不显然的坑、代码与用户自述不一致处。
-- 目录树**原样附录**,不由 LLM 复述——它是"证明某物不存在"的依据,转述必然有损,而 3.4 KB 的代价可忽略。
+- 目录树**逐字附上**,不由 LLM 复述——它是"证明某物不存在"的依据,转述必然有损。小仓(如 WhatIf 双仓 3.4 KB)直接内联,代价可忽略;巨型项目(如 UE 超大仓,目录树可达 MB 级)则外置为 `GRILL.md` 引用的独立文件(`trees/<仓名>.txt`),正文只放引用。参照 Claude Code `/init` 用 `@path/to/import` 引用大内容而非内联的做法——阈值内内联(自包含),超阈值引用(正文精简),两种情形下逐字与不经 LLM 的性质都不变。
 
 **8. 失败与盲区显式化**
 
@@ -116,6 +120,15 @@
 - 但该结论不能推广到搜索类工具:`grep`/`glob` 本就预期多命中,抛错等于什么都没返回。
 - 截断信息只在**真截断**时给。恰好等于上限而未丢弃任何结果时报告截断,会诱导下游翻一页空结果。
 - 解除上限的逃生口是"证明不存在"的前提:默认上限之下,被丢弃的结果里是否仍有命中无法排除,该判定不成立。这正是精简地图那条固有张力(擅长指向存在,不擅长证明不存在)在工具层的落点。
+
+**12. 阅读者 agent 用 AI SDK 原生 tool-calling,不引 Mastra**
+
+- 实现:`generateText` + `tools`(glob/grep/read_file)+ `stopWhen: stepCountIs(N)` 构成 agentic 循环,零新依赖(`ai@5` 已在依赖里)。
+- 备选:proposal 原文拟引入 Mastra 做"角色与工具注册",与 `judge-agent-and-eval` 共用 —— 弃用。理由:
+  - spec 是**框架无关**的("信息边界由工具注册与返回值类型决定"),没有任何一条要求 Mastra。
+  - 阅读者是**无状态一问一答**(`ask_reader`),用不上 Mastra 的 workflow / memory / 多 agent 编排;为一个薄 agent 引一整套框架是过度设计。
+  - 兼容性风险:Mastra 与 `ai` 版本历来有摩擦,tasks 5.1 本身就把"确认与 ai@5 兼容"列为待验风险;原生实现直接规避。
+  - 共用收益暂时无法兑现:`judge-agent-and-eval` 尚未动工,且其设计里裁判**不注册任何文件工具**,未必需要 agent 框架。若确有需求,由该变更自行评估,不由本变更预先绑定依赖。
 
 ## Risks / Trade-offs
 

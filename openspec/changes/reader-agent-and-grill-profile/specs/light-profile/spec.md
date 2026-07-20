@@ -35,7 +35,7 @@
 
 后缀匹配 MUST 大小写不敏感。
 
-生成的目录树 MUST 原样附在 `GRILL.md` 末尾,MUST NOT 由 LLM 复述或改写——目录树是判断"某个东西是否存在"的依据,转述会造成有损。
+生成的目录树 MUST 逐字落盘、MUST NOT 由 LLM 复述或改写——目录树是判断"某个东西是否存在"的依据,转述会造成有损。目录树 MUST 可从 `GRILL.md` 抵达:体积在阈值内时**内联**于 `GRILL.md`;超过阈值时 MAY 外置为 `GRILL.md` 引用的独立文件(如 `trees/<仓名>.txt`),此时 `GRILL.md` MUST 给出指向该文件的引用。理由:巨型项目(如 UE 超大仓)的目录树可达 MB 级,全量内联会撑爆下游整篇读入 `GRILL.md` 的上下文并毁掉地图的精简性;外置在保持逐字与不经 LLM 的前提下,让正文保持精简。
 
 #### Scenario: 扫描时忽略噪声目录
 
@@ -47,10 +47,15 @@
 - **WHEN** 仓库根目录下存在 `package-lock.json` 或 `pnpm-lock.yaml`
 - **THEN** 这些文件既不出现在目录树中,也不进入待精读的文件清单
 
-#### Scenario: 目录树原样进入地图
+#### Scenario: 小目录树内联进地图
 
-- **WHEN** 系统生成 `GRILL.md`
-- **THEN** 扫描得到的目录树以原文形式出现在 `GRILL.md` 中,内容与扫描结果逐字一致
+- **WHEN** 系统生成 `GRILL.md`,且目录树体积在内联阈值内
+- **THEN** 扫描得到的目录树以原文形式内联出现在 `GRILL.md` 中,内容与扫描结果逐字一致
+
+#### Scenario: 超大目录树外置并被地图引用
+
+- **WHEN** 某仓的目录树体积超过内联阈值
+- **THEN** 该目录树逐字写入 `GRILL.md` 引用的独立文件,`GRILL.md` 正文中出现指向该文件的引用而非内联全文,且外置内容与扫描结果逐字一致
 
 ### Requirement: 用户功能关系配置合并与校验
 
@@ -97,7 +102,9 @@
 
 系统 SHALL 在生成地图前收集项目中人工撰写的约定文档,并按可信度分级使用:用户输入 > 约定文档 > README > 清单文件 > 源码。
 
-约定文档的收集 MUST 自每个被扫描目录向上逐层遍历至文件系统根,每层尝试读取约定文档(如 `CLAUDE.md`、`AGENTS.md`、`README.md`),读取不到即跳过。收集结果 MUST 按由根向下的顺序排列。
+约定文档的收集 MUST 自每个被扫描目录向上逐层遍历至文件系统根,每层尝试读取约定文档,读取不到即跳过。收集结果 MUST 按由根向下的顺序排列。
+
+约定文档的类型 MUST 不限于 `CLAUDE.md`,而应覆盖各家 AI 编码工具的规则文件——它们同样是人手写的高信号约定。收集范围 MUST 包含:`CLAUDE.md`、`CLAUDE.local.md`、`AGENTS.md`、`.cursorrules`、`.clinerules`、`.windsurfrules`,以及固定嵌套位置的 `.github/copilot-instructions.md` 与 `.cursor/rules/` 下的规则文件;`README.md` 归入可信度更低的 README 档。
 
 当约定文档提供的信号已足够时,系统 MAY 跳过分批精读阶段。
 
@@ -110,6 +117,11 @@
 
 - **WHEN** 自被扫描目录向上至根均未找到任何约定文档
 - **THEN** 系统进入分批精读阶段,以源码作为主要证据
+
+#### Scenario: 收集各家 AI 工具的规则文件
+
+- **WHEN** 被扫描目录的祖先链上存在 `.cursorrules`、`.windsurfrules`、`.github/copilot-instructions.md` 或 `.cursor/rules/` 下的规则文件
+- **THEN** 这些文件被作为约定档(可信度高于 README)纳入证据
 
 ### Requirement: 分批精读产出跨文件结论
 
