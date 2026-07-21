@@ -15,3 +15,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 理由:原文是判断依据,不能丢失;译文保证阅读效率。只给译文会让人无法核对我是否理解偏了。
 
 代码标识符、命令、文件路径保持原样,不翻译。
+
+## 提交规范
+
+本项目的 commit message **用中文**——这是对全局规则「Commit message 用 Conventional Commits 英文」的项目级覆盖(本项目 openspec 文档、代码注释均为中文,提交同语言更连贯)。
+
+仍遵循 Conventional Commits 结构:类型前缀(`feat`/`fix`/`chore`/`refactor`/`docs` 等)保留英文,冒号之后的描述与正文用中文。示例:
+
+```
+feat(reader): 实现分批精读与 notes 缓存
+
+按目录聚类分批,超预算单文件独占一批不截断;每批笔记落盘到 notes/,
+重跑汇总阶段直接复用,不重付精读成本。
+```
