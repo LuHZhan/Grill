@@ -1,24 +1,23 @@
-## 1. 依赖与 JudgeOutput Schema
+## 1. JudgeOutput Schema(无新依赖,复用 ai@5)
 
-- [ ] 1.1 添加 Mastra 依赖,确认与已装的 ai@5 / @ai-sdk/deepseek 版本兼容
-- [ ] 1.2 用 Zod 定义 `JudgeOutputSchema`(robustness / collapse_point / did_drill / drilled_files / next_probe / reasoning)并导出类型
-- [ ] 1.3 在 schema 层加上"solid 时 collapse_point 必须为 null"的约束(refine)
-- [ ] 1.4 实现投影函数 `toInterviewerProbe(o: JudgeOutput): string | null`,只返回 next_probe;面试官可见数据由此函数产出,不由调用方手挑字段
+- [ ] 1.1 用 Zod 定义 `JudgeOutputSchema`(robustness / collapse_point / did_ask_reader / reader_queries / next_probe / reasoning)并导出类型
+- [ ] 1.2 在 schema 层加上"solid 时 collapse_point 必须为 null"的约束(refine)
+- [ ] 1.3 实现投影函数 `toInterviewerProbe(o: JudgeOutput): string | null`,只返回 next_probe;面试官可见数据由此函数产出,不由调用方手挑字段
 
-## 2. read_file 工具
+## 2. ask_reader 工具接线
 
-- [ ] 2.1 实现 `read_file(路径)` 工具,读取被测项目单个文件内容
-- [ ] 2.2 实现路径安全校验:解析为绝对路径后必须仍在轻档案声明的仓根内,拒绝 `..`、符号链接、仓外绝对路径
-- [ ] 2.3 文件不存在或读取失败时返回可读错误给裁判,不抛出中断整轮
-- [ ] 2.4 记录本轮实际读取的文件路径,供 `did_drill` / `drilled_files` 填充
+- [ ] 2.1 把上游阅读者的 `ask_reader(question): Promise<string>` 封成裁判可调用的 AI SDK 工具(裁判不注册任何文件工具)
+- [ ] 2.2 `ask_reader` 调用失败时返回可读错误给裁判,不抛出中断整轮
+- [ ] 2.3 记录本轮向阅读者问过的问题,供 `did_ask_reader` / `reader_queries` 填充
+- [ ] 2.4 确认路径安全不在裁判侧重做——它由阅读者的 ask_reader/工具保证,裁判够不到文件系统
 
 ## 3. 裁判 Agent
 
-- [ ] 3.1 用 Mastra 定义裁判 agent,注册 `read_file` 工具
+- [ ] 3.1 用 AI SDK 原生(`generateText` + `tools` + `stopWhen`)定义裁判 agent,注册 `ask_reader` 工具,不引 Mastra
 - [ ] 3.2 写裁判 Prompt:只写找接缝的判断标准与抗压尺度,不写输出格式(格式由 schema 管)
 - [ ] 3.3 在 Prompt 中明确 `next_probe` 不得含源码片段或文件路径
-- [ ] 3.4 实现裁判调用入口:输入轻档案 + 对话历史 + 最新回答,输出 `JudgeOutput`
-- [ ] 3.5 验证「工具循环 + 强制结构化输出」一步法是否可行;不可行则降级为两步法(先工具循环,再 structured 抽取)
+- [ ] 3.4 实现裁判调用入口:输入 `GRILL.md` + `profile.json` + 对话历史 + 最新回答,输出 `JudgeOutput`
+- [ ] 3.5 验证「工具循环 + 强制结构化输出」一步法是否可行;不可行则降级为两步法(先 `generateText` + `ask_reader`,再 `generateObject` 抽取)
 - [ ] 3.6 输出不通过 schema 校验时抛可定位的错误,不静默放行
 
 ## 4. 标注测试集
@@ -37,7 +36,7 @@
 
 ## 6. 验证
 
-- [ ] 6.1 【需用户参与】用真实轻档案 + 手写测试集跑一遍回归脚本,读出一致率
+- [ ] 6.1 【需用户参与】用真实 `GRILL.md` + `profile.json` + 手写测试集跑一遍回归脚本,读出一致率
 - [ ] 6.2 人工抽查若干条 `next_probe`,确认没有泄露源码片段或文件路径
-- [ ] 6.3 覆盖异常路径:读取仓外路径被拒、读取不存在文件不中断、测试集格式非法报错
+- [ ] 6.3 覆盖异常路径:`ask_reader` 调用失败不中断整轮、测试集格式非法报错
 - [ ] 6.4 根据一致率决定是否需要调 Prompt 或换模型;记录基线一致率供后续回归对比

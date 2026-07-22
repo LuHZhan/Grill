@@ -1,20 +1,20 @@
 ## Context
 
-前置变更 `preprocess-light-profile` 已实现:轻档案的结构由 `src/preprocess/schema.ts` 的 Zod schema 定死,裁判的输入契约确定。本变更实现裁判角色本身,并给它配一层能脱离主观感觉的验证。
+上游变更 `reader-agent-and-grill-profile` 已定稿并归档:阅读者离线产出 `GRILL.md`(项目地图)+ `profile.json`(结构化 metadata,schema 在 `src/reader/schema.ts`),并提供在线问答接口 `ask_reader(question): Promise<string>`。裁判的输入契约与下钻方式据此确定。本变更实现裁判角色本身,并给它配一层能脱离主观感觉的验证。
 
 约束:
 
-- 技术栈已定:TypeScript + Zod;模型走 Vercel AI SDK + DeepSeek(`deepseek-chat`,`DEEPSEEK_API_KEY`),与预处理一致。
-- 方案第八节指定编排用 Mastra(角色、工具、workflow 均为纯 TS + Zod)。
-- 裁判需读取被测项目源码,故被测前后端仓须在本地可读。
-- 轻档案的**真实体积**尚未验证(前置变更 tasks 7.1/7.2 未跑)。若实测过大放不进裁判上下文,本变更需回头调整——这是已知的悬空点。
+- 技术栈已定:TypeScript + Zod;模型走 Vercel AI SDK + DeepSeek(`deepseek-chat`,`DEEPSEEK_API_KEY`),与上游一致。
+- Agent 用 AI SDK 原生 tool-calling(`generateText` + `tools` + `stopWhen`),不引 Mastra——上游阅读者已验证原生够用(见决策 1)。
+- 裁判本身**不读源码**:下钻走阅读者的 `ask_reader`;阅读者需被测项目源码在本地可读。
+- 裁判输入 `GRILL.md` 是**刻意做小的**项目地图(上游实测 WhatIf 双仓约 5 KB),配 `profile.json` 按字段取用,整体远在裁判上下文预算内;地图答不了的细节走 `ask_reader`,不需要把源码塞进裁判上下文。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
 - 裁判能对一段回答产出 Zod 强制约束的 `JudgeOutput`,格式永不漂移。
-- 裁判能按需 `read_file` 下钻,并如实记录下钻了哪些文件。
+- 裁判能按需 `ask_reader` 向阅读者追问,并如实记录问了哪些问题。
 - 裁判可**单独运行、单独验证**,不依赖面试官与编排层。
 - 一套标注测试集 + 回归脚本,让"改 Prompt 后裁判变准还是变差"成为可测量的事。
 
@@ -27,27 +27,30 @@
 
 ## Decisions
 
-**1. 用 Mastra 定义裁判,而非直接裸用 AI SDK**
-- 理由:方案第八节已指定 Mastra 作为角色与工具的载体;第三个变更的编排层本就要用它,裁判现在建在 Mastra 上,后续只需接线。
-- 备选:直接用 AI SDK `generateText` + 手写工具循环 —— 少一个依赖,但第三个变更还得整体搬一次。
+**1. 用 AI SDK 原生 tool-calling 定义裁判,不引 Mastra**
+- 实现:`generateText` + `tools`(`ask_reader`)+ `stopWhen: stepCountIs(N)` 构成 agentic 循环,零新依赖(`ai@5` 已在依赖里)。
+- 备选:引入 Mastra 做角色与工具注册 —— 弃用。理由:
+  - 上游阅读者(同为单点、无状态的 agent)已用 AI SDK 原生搭成并跑通,裁判本质也是"输入 → 一个 `JudgeOutput`"的一次评分,用不上 Mastra 的 workflow / memory / 多 agent 编排。
+  - 原来引 Mastra 的唯一理由是"第三个变更的编排层反正要用"——但上游已拐向原生,该共用收益兑现不了;第三个变更若确有编排框架需求,由它自行评估,不由本变更预先绑定依赖。
+  - 兼容性:Mastra 与 `ai` 版本历来有摩擦,原生实现直接规避。
 
-**2. 「无护栏」指无下钻预算,不指无路径校验**
-- 方案说 MVP「无护栏、无预算、想读就读」,指的是**不限制下钻次数与深度**。
-- 但 `read_file` 的路径是**模型输出**,属不可信输入。实现 MUST 把路径限制在轻档案声明的两个仓根之内:解析为绝对路径后校验仍在仓根内,拒绝 `..`、符号链接与仓外绝对路径。
-- 理由:这是安全边界,不是产品护栏。放开它意味着一个被诱导的裁判可以读任意本地文件。两者不能混为一谈。
+**2. MVP 不限 `ask_reader` 提问次数;路径安全不再是裁判的事**
+- 方案说 MVP「无护栏、无预算、想读就读」——落到本变更即**不限制裁判向阅读者提问的次数与深度**。
+- 裁判**不注册任何文件工具**,手里没有源码路径,也够不到文件系统:下钻只能通过 `ask_reader(question): Promise<string>`,拿回自然语言结论。因此"路径限制在仓根内、拒 `..`/符号链接"这类安全校验**归阅读者**(上游已实现并验证),本变更无需重做。
+- 收益:裁判侧的攻击面直接消失——一个被诱导的裁判也读不到任意本地文件,因为它根本没有文件工具。
 
-**3. 信息边界靠工具注册 + 类型投影,不靠 Prompt**
-- 裁判注册 `read_file`;面试官(第三个变更)不注册任何读取工具,物理上够不到源码。
-- **但工具边界拦不住数据边界**:方案 §5.1 的 `InterviewState.history` 是单一数组、每个 Turn 内嵌完整 `JudgeOutput`,#3 若把 `history` 直接递给面试官(这是该结构最自然的用法),面试官立刻拿到 `reasoning` 与 `drilled_files`——后者是**结构化的源码路径**,泄露比 `next_probe` 更确凿,靠 Prompt 拦不住,因为数据就在上下文里。
-- 因此在本变更就交付投影函数 `toInterviewerProbe(o): string | null`,由**类型/函数边界**保证面试官只拿得到 `next_probe`,而非靠 #3 的调用方"记得只挑一个字段"——后者正是方案第二节反对的"靠自觉"。
-- 剩余风险:`next_probe` 的**文本内容**里可能藏源码片段或路径,这一条确实只能靠 Prompt 约束,代码无法可靠强制(自然语言里检测路径不可靠)。评估阶段人工抽查。
+**3. 面试官视图靠类型投影收窄,不靠 Prompt**
+- 裁判的完整 `JudgeOutput` 含 `reasoning`(完整推理)与 `reader_queries`(向阅读者问过的问题)——都是裁判的内部过程,不该原样递给面试官。
+- 方案 §5.1 的 `InterviewState.history` 是单一数组、每个 Turn 内嵌完整 `JudgeOutput`,#3 若把 `history` 直接递给面试官(最自然的用法),面试官立刻拿到裁判的全部推理。故在本变更就交付投影函数 `toInterviewerProbe(o): string | null`,由**类型/函数边界**保证面试官只拿得到 `next_probe`,而非靠调用方"记得只挑一个字段"(方案第二节反对的"靠自觉")。
+- 注:换 `ask_reader` 后,`JudgeOutput` 里**不再有任何源码文件路径**(阅读者只回自然语言),旧设计中"`drilled_files` 是结构化源码路径、泄露比 `next_probe` 更确凿"的那类隐患随之消失;投影函数现在只需挡住裁判的内部推理,而非结构化路径。
+- 剩余风险:`next_probe` 的**文本内容**里可能藏被追问方向的敏感措辞,这一条只能靠 Prompt 约束,评估阶段人工抽查。
 
 **4. 工具循环与结构化输出的组合方式**
-- 首选:一次调用内完成(Mastra agent 带 tools + structuredOutput)。
-- 若框架对「多轮工具调用 + 强制结构化输出」支持不佳,降级为两步:先跑工具循环拿到裁判的自由文本推理,再用一次 structured 调用抽成 `JudgeOutput`。
+- 首选:一次调用内完成(`generateText` 带 `tools` + 结构化输出)。
+- 若「多轮工具调用 + 强制结构化输出」一步难以稳定,降级为两步:先用 `generateText` + `ask_reader` 跑工具循环拿到裁判的自由文本推理,再用一次 `generateObject` 抽成 `JudgeOutput`。这正是 AI SDK 原生的标准姿势。
 - 实现时先试一步法,不通再降级;两种都能满足 spec。
 
-**5. 标注测试集用 JSON + Zod 校验,与轻档案一致**
+**5. 标注测试集用 JSON + Zod 校验,与上游产出的 profile.json 风格一致**
 - 每案例含 `id`、`question`(提问上下文)、`answer`(用户回答)、`expected`(可接受的 robustness 取值数组)、`note`(标注理由,给人看)。
 - `expected` 用**数组**而非单值:有效包装类回答天然允许 solid 或 partial 两种合理判断,强行单值会制造假阴性。
 
@@ -58,15 +61,15 @@
 
 ## Risks / Trade-offs
 
-- **[轻档案实测过大,塞不进裁判上下文]** → 前置变更 tasks 7.2 未跑,这是已知悬空点。若发生,调预处理的忽略清单/模块上限,而非在裁判侧截断(截断会让裁判看到残缺项目)。
-- **[Mastra 对「工具循环 + 强制结构化输出」支持不佳]** → 已备降级方案(决策 4 两步法)。实现时先验证,不猜。
-- **[`next_probe` 的文本里藏源码片段或路径]** → 字段级泄露已由投影函数堵死(决策 3),但文本内容只能靠 Prompt 约束;评估阶段人工抽查若干条 `next_probe`。
+- **[`GRILL.md` + `profile.json` 塞不进裁判上下文]** → 概率很低:`GRILL.md` 是上游刻意做小的地图(WhatIf 实测约 5 KB),超大仓的目录树还会外置为 sidecar 不进正文。真遇到再在上游调地图密度,而非在裁判侧截断。
+- **[「工具循环 + 强制结构化输出」一步不稳]** → 已备降级方案(决策 4 两步法,即 AI SDK 原生标准姿势)。实现时先验证,不猜。
+- **[`next_probe` 的文本里藏被追问方向的敏感措辞]** → 裁判手里已无源码路径(换 `ask_reader` 后),字段级泄露不复存在;文本内容只能靠 Prompt 约束,评估阶段人工抽查若干条 `next_probe`。
 - **[测试集规模小(10–15 条),一致率统计噪声大]** → MVP 只求"改动后有没有明显回归"的信号,不追求统计显著性。一致率跌 20% 是信号,跌 7% 可能是噪声,别过度解读。
 - **[标注本身可能有错]** → 回归脚本对不一致的案例必须同时打印裁判的 `reasoning`,便于判断到底是裁判错还是标注错。
 - **[裁判判断不稳定(同输入多次结果不同)]** → LLM 固有。MVP 不做多次采样投票;若一致率波动大到无法读出信号,再考虑固定采样或多次取多数。
 
 ## Open Questions
 
-- Mastra 的 agent + tools + structuredOutput 一步法是否可行——实现时验证,不可行走两步法。
+- AI SDK 「工具循环 + 一次性结构化输出」一步法是否稳定——实现时验证,不稳走两步法(`generateText` + `ask_reader` 拿文本,再 `generateObject` 抽 `JudgeOutput`)。
 - 裁判上下文里塞入的对话历史长度上限——MVP 场次短(≤8 轮),先全量塞,超限再说。
 - `deepseek-chat` 在"找接缝"这类判断任务上是否够用——先跑评估集看一致率;若明显偏低,换模型也是评估集要回答的问题。

@@ -2,11 +2,11 @@
 
 ### Requirement: 裁判产出结构化抗压判断
 
-裁判 SHALL 接收轻档案、对话历史与用户最新回答,产出一个 `JudgeOutput` 对象。该对象 MUST 由 Zod schema 强制约束,包含 `robustness`(`solid` | `partial` | `collapsed`)、`collapse_point`、`did_drill`、`drilled_files`、`next_probe`、`reasoning` 六个字段。
+裁判 SHALL 接收 `GRILL.md` + `profile.json`、对话历史与用户最新回答,产出一个 `JudgeOutput` 对象。该对象 MUST 由 Zod schema 强制约束,包含 `robustness`(`solid` | `partial` | `collapsed`)、`collapse_point`、`did_ask_reader`、`reader_queries`、`next_probe`、`reasoning` 六个字段。
 
 #### Scenario: 对一段回答产出合法判断
 
-- **WHEN** 裁判收到轻档案、对话历史与用户的最新回答
+- **WHEN** 裁判收到 `GRILL.md` + `profile.json`、对话历史与用户的最新回答
 - **THEN** 裁判返回一个通过 Zod schema 校验的 `JudgeOutput`,其 `robustness` 取值必为 solid / partial / collapsed 三者之一
 
 #### Scenario: 模型输出不符 schema 时不静默放行
@@ -28,23 +28,23 @@
 - **WHEN** 裁判判定某段回答为 `partial` 或 `collapsed`
 - **THEN** `collapse_point` 为非空字符串,指明具体是哪个说法站不住
 
-### Requirement: 按需下钻读取源码
+### Requirement: 按需向阅读者追问
 
-裁判 SHALL 注册 `read_file(路径)` 工具,可按需读取被测项目的单个源码文件。MVP 阶段不设下钻预算与护栏。真实代码的用途是**出题弹药**——用于定位用户说法里最脆弱的接缝,而非核对事实真伪。
+裁判 SHALL 注册 `ask_reader(问题)` 工具,可就 `GRILL.md` 未覆盖的细节向全知阅读者提问,拿回自然语言结论。裁判 MUST NOT 注册任何文件读取工具——它物理上够不到源码。MVP 阶段不设提问预算与护栏。追问的用途是**出题弹药**——用于定位用户说法里最脆弱的接缝,而非核对事实真伪。
 
-#### Scenario: 下钻后如实记录读了哪些文件
+#### Scenario: 追问后如实记录问了哪些问题
 
-- **WHEN** 裁判在本轮调用了 `read_file` 读取一个或多个文件
-- **THEN** `did_drill` 为 true,且 `drilled_files` 包含本轮实际读取的全部文件路径
+- **WHEN** 裁判在本轮调用了 `ask_reader` 提出一个或多个问题
+- **THEN** `did_ask_reader` 为 true,且 `reader_queries` 包含本轮实际提出的全部问题
 
-#### Scenario: 未下钻时如实记录
+#### Scenario: 未追问时如实记录
 
-- **WHEN** 裁判本轮未调用 `read_file`
-- **THEN** `did_drill` 为 false,且 `drilled_files` 为空数组
+- **WHEN** 裁判本轮未调用 `ask_reader`
+- **THEN** `did_ask_reader` 为 false,且 `reader_queries` 为空数组
 
-#### Scenario: 读取不存在的文件不中断判断
+#### Scenario: 追问失败不中断判断
 
-- **WHEN** 裁判请求读取一个在被测项目中不存在的路径
+- **WHEN** 裁判的某次 `ask_reader` 调用失败
 - **THEN** 工具返回可读的错误信息给裁判,裁判据此调整并仍产出合法的 `JudgeOutput`,整轮不崩溃
 
 ### Requirement: 递给面试官的追问点
@@ -72,19 +72,19 @@
 
 ### Requirement: 面试官视图由类型边界强制
 
-裁判的完整产出 MUST NOT 整体递给面试官。系统 SHALL 提供一个显式的投影函数,把 `JudgeOutput` 收窄为面试官可见的部分,且该部分 MUST 仅包含 `next_probe`。`reasoning`(裁判的完整推理)与 `drilled_files`(具体源码文件路径)MUST NOT 出现在面试官可见的数据里——后者是结构化的源码路径,直接击穿"面试官物理隔离于源码"这条边界。
+裁判的完整产出 MUST NOT 整体递给面试官。系统 SHALL 提供一个显式的投影函数,把 `JudgeOutput` 收窄为面试官可见的部分,且该部分 MUST 仅包含 `next_probe`。`reasoning`(裁判的完整推理)与 `reader_queries`(裁判向阅读者问过的问题)MUST NOT 出现在面试官可见的数据里——它们是裁判的内部过程,面试官应从 `next_probe` 自然发问,而非窥得裁判的推理与追问轨迹。
 
 这条约束 MUST 由类型/函数边界保证,MUST NOT 依赖调用方"记得只挑 next_probe"。
 
 #### Scenario: 投影后只剩追问点
 
-- **WHEN** 编排层用投影函数处理一个含非空 `reasoning` 与 `drilled_files` 的 `JudgeOutput`
-- **THEN** 得到的结果只含 `next_probe` 的内容,不含 `reasoning`、`drilled_files`、`collapse_point` 或 `robustness`
+- **WHEN** 编排层用投影函数处理一个含非空 `reasoning` 与 `reader_queries` 的 `JudgeOutput`
+- **THEN** 得到的结果只含 `next_probe` 的内容,不含 `reasoning`、`reader_queries`、`collapse_point` 或 `robustness`
 
 #### Scenario: 完整产出仍可用于存档与复盘
 
 - **WHEN** 编排层需要落盘存档或做复盘评分
-- **THEN** 完整的 `JudgeOutput`(含 `reasoning` 与 `drilled_files`)可被直接使用,不受投影函数限制
+- **THEN** 完整的 `JudgeOutput`(含 `reasoning` 与 `reader_queries`)可被直接使用,不受投影函数限制
 
 ### Requirement: 裁判 Prompt 只承载判断力
 
