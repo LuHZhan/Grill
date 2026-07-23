@@ -25,3 +25,12 @@ export interface BaseLlmConfig {
 export function readerModel(model: string = DEFAULT_MODEL): LanguageModel {
   return deepseek(model);
 }
+
+/**
+ * 裁判用模型句柄 —— 目前与阅读者同为 `deepseek-chat`,但独立入口:裁判做的是
+ * "找接缝"的判断,将来可能需要更强模型(见 judge design open question),分开
+ * 命名便于只换裁判这一侧而不动阅读者。
+ */
+export function judgeModel(model: string = DEFAULT_MODEL): LanguageModel {
+  return deepseek(model);
+}
