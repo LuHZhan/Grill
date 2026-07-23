@@ -1,3 +1,7 @@
+> **⚠️ SUPERSEDED 已被取代**:本 change 已被 `reader-agent-and-grill-profile`(归档于 `openspec/changes/archive/2026-07-21-reader-agent-and-grill-profile/`)完全取代并吸收——预处理脚本经 `refactor(reader): 按角色重组目录` 并入 `src/reader/`(现 `npm run preprocess` 的入口即 `src/reader/index.ts`),`light-profile` capability 演进为「阅读者离线产出 `GRILL.md` + `profile.json` + `notes/`」的第二代形态。
+>
+> **下方的 What Changes 与 spec 均为第一代设计,不代表现行契约**——`light-profile` 的现行契约见 `openspec/specs/light-profile/spec.md`。本 change 归档仅作历史留存,归档时**未回写主 specs**:回写会用第一代(前后端两仓、简单 JSON 轻档案)覆盖已演进的第二代,造成 spec 倒退。
+
 ## Why
 
 面试模块 MVP 的裁判 Agent 需要"真实代码"作为出题弹药,但直接把整个前端仓 + 后端仓塞进上下文既不现实也太贵。我们需要一份**预先生成、结构化、体积小到能整个放进裁判上下文**的项目速览——即"轻档案"。它是整个面试模块的数据地基:没有它,裁判无从下钻,面试官也缺少项目背景。这是 MVP 的第一个开发里程碑,纯数据管道,不含任何 Agent,可独立跑通与验证。
