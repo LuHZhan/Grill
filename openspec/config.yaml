@@ -10,7 +10,12 @@ context: |
 rules:
   proposal:
     - 使用简体中文撰写
+    - 叙述性章节标题在英文后附中文,用空格分隔,如 `## Why 为什么`、`## Impact 影响`
+  design:
+    - 使用简体中文撰写
+    - 叙述性章节标题在英文后附中文,用空格分隔,如 `## Context 背景`、`## Decisions 决策`
   spec:
     - 使用简体中文撰写
+    - openspec 结构标记(## ADDED Requirements、### Requirement:、#### Scenario:)保持英文原样,不得双语
   tasks:
     - 使用简体中文撰写

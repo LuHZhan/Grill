@@ -2,11 +2,11 @@
 
 ### Requirement: 裁判产出结构化抗压判断
 
-裁判 SHALL 接收 `GRILL.md` + `profile.json`、对话历史与用户最新回答,产出一个 `JudgeOutput` 对象。该对象 MUST 由 Zod schema 强制约束,包含 `robustness`(`solid` | `partial` | `collapsed`)、`collapse_point`、`did_ask_reader`、`reader_queries`、`next_probe`、`reasoning` 六个字段。
+裁判 SHALL 接收 `GRILL.md` + `profile.json`、岗位 JD、对话历史与用户最新回答,产出一个 `JudgeOutput` 对象。该对象 MUST 由 Zod schema 强制约束,包含 `robustness`(`solid` | `partial` | `collapsed`)、`collapse_point`、`did_ask_reader`、`reader_queries`、`next_probe`、`reasoning` 六个字段。
 
 #### Scenario: 对一段回答产出合法判断
 
-- **WHEN** 裁判收到 `GRILL.md` + `profile.json`、对话历史与用户的最新回答
+- **WHEN** 裁判收到 `GRILL.md` + `profile.json`、岗位 JD、对话历史与用户的最新回答
 - **THEN** 裁判返回一个通过 Zod schema 校验的 `JudgeOutput`,其 `robustness` 取值必为 solid / partial / collapsed 三者之一
 
 #### Scenario: 模型输出不符 schema 时不静默放行

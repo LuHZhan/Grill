@@ -1,24 +1,26 @@
 ## 1. JudgeOutput Schema(无新依赖,复用 ai@5)
 
-- [ ] 1.1 用 Zod 定义 `JudgeOutputSchema`(robustness / collapse_point / did_ask_reader / reader_queries / next_probe / reasoning)并导出类型
-- [ ] 1.2 在 schema 层加上"solid 时 collapse_point 必须为 null"的约束(refine)
-- [ ] 1.3 实现投影函数 `toInterviewerProbe(o: JudgeOutput): string | null`,只返回 next_probe;面试官可见数据由此函数产出,不由调用方手挑字段
+- [x] 1.1 用 Zod 定义 `JudgeOutputSchema`(robustness / collapse_point / did_ask_reader / reader_queries / next_probe / reasoning)并导出类型
+- [x] 1.2 在 schema 层加上"solid 时 collapse_point 必须为 null"的约束(refine)
+- [x] 1.3 实现投影函数 `toInterviewerProbe(o: JudgeOutput): string | null`,只返回 next_probe;面试官可见数据由此函数产出,不由调用方手挑字段
+- [x] 1.4 加 `did_ask_reader` 与 `reader_queries` 是否为空的一致性 refine(设计决策 9;支撑 agent 侧以工具记录覆盖模型自报)
 
 ## 2. ask_reader 工具接线
 
-- [ ] 2.1 把上游阅读者的 `ask_reader(question): Promise<string>` 封成裁判可调用的 AI SDK 工具(裁判不注册任何文件工具)
-- [ ] 2.2 `ask_reader` 调用失败时返回可读错误给裁判,不抛出中断整轮
-- [ ] 2.3 记录本轮向阅读者问过的问题,供 `did_ask_reader` / `reader_queries` 填充
-- [ ] 2.4 确认路径安全不在裁判侧重做——它由阅读者的 ask_reader/工具保证,裁判够不到文件系统
+- [x] 2.1 把上游阅读者的 `ask_reader(question): Promise<string>` 封成裁判可调用的 AI SDK 工具(裁判不注册任何文件工具)
+- [x] 2.2 `ask_reader` 调用失败时返回可读错误给裁判,不抛出中断整轮
+- [x] 2.3 记录本轮向阅读者问过的问题,供 `did_ask_reader` / `reader_queries` 填充
+- [x] 2.4 确认路径安全不在裁判侧重做——它由阅读者的 ask_reader/工具保证,裁判够不到文件系统
 
 ## 3. 裁判 Agent
 
-- [ ] 3.1 用 AI SDK 原生(`generateText` + `tools` + `stopWhen`)定义裁判 agent,注册 `ask_reader` 工具,不引 Mastra
-- [ ] 3.2 写裁判 Prompt:只写找接缝的判断标准与抗压尺度,不写输出格式(格式由 schema 管)
-- [ ] 3.3 在 Prompt 中明确 `next_probe` 不得含源码片段或文件路径
-- [ ] 3.4 实现裁判调用入口:输入 `GRILL.md` + `profile.json` + 对话历史 + 最新回答,输出 `JudgeOutput`
+- [x] 3.1 用 AI SDK 原生(`generateText` + `tools` + `stopWhen`)定义裁判 agent,注册 `ask_reader` 工具,不引 Mastra
+- [x] 3.2 写裁判 Prompt(只写判断标准与抗压尺度,不写输出格式):判"扎实"须落到本项目具体决策+理由、拒通用八股(决策 7);按 JD 岗位级别调尺度(决策 8);节制下钻、不滥用 ask_reader(决策 2)
+- [x] 3.3 在 Prompt 中明确 `next_probe` 不得含源码片段或文件路径
+- [x] 3.4 实现裁判调用入口:输入 `GRILL.md` + `profile.json` + `JD` + 对话历史 + 最新回答(`JudgeInput` 含 `jd`,决策 8),输出 `JudgeOutput`
 - [ ] 3.5 验证「工具循环 + 强制结构化输出」一步法是否可行;不可行则降级为两步法(先 `generateText` + `ask_reader`,再 `generateObject` 抽取)
-- [ ] 3.6 输出不通过 schema 校验时抛可定位的错误,不静默放行
+- [x] 3.6 输出不通过 schema 校验时抛可定位的错误,不静默放行
+- [x] 3.7 产出后用 ask_reader 工具实际记录的 queries 覆盖模型自报的 `reader_queries` / `did_ask_reader`,再过 schema 校验(决策 9)
 
 ## 4. 标注测试集
 
