@@ -72,6 +72,15 @@
 - 裁判自报"问没问过阅读者"可能漏报或虚报;真账是 `ask_reader` 工具封装侧记录的 `queries`。产出 `JudgeOutput` 后用该 `queries` 覆盖模型自报的 `reader_queries` / `did_ask_reader`,再过一次 schema 校验,不通过即抛(不静默)。
 - schema 因此在"扎实⇒崩溃点为空"之外增加一条 `did_ask_reader` 与 `reader_queries` 是否为空的一致性 refine,作为该覆盖逻辑的结构支撑。
 
+**10. 两层评分的命名与架构:judge 域与 eval 域各留一条 Strategy 缝**
+- 本变更存在两层"打分",命名**互不借词**以防歧义:第一层 **judge 域**(`src/judge/`,产品运行时)——裁判对候选人回答产出**判定**(`JudgeOutput`);第二层 **eval 域**(`src/eval/`,离线)——评估层给裁判的判定打**成绩**(`GradeResult`),汇总为**评估报告**(`EvalReport`,核心数是一致率)。"score/评分"一词两层都不用——它正是歧义之源;"judge"只属第一层,第二层的打分器一律叫 `Grader`(将来引入 LLM 复核也叫 `LlmGrader`,不叫 JudgeJudge)。
+- 两层各是一条独立迭代轴,各以 Strategy 缝承接,互不牵动:
+  - **判定算法缝**(judge 域):`agent.ts` 的 `RunFn` 注入即策略位——现行两步法是默认实现,一步法(任务 3.5)、多次采样取多数等均为替换实现,`JudgeOutput` 契约与下游不动。第二个实现出现时再把 `RunFn` 升格为具名 `JudgeStrategy`,现在不动。
+  - **打分算法缝**(eval 域):`Grader` 接口(`name` + `grade(case, judgment) → GradeResult`)——MVP 只交付 `ExactMatchGrader`(命中 `expected[]` 任一即算一致);Non-Goals 里的"评估第二层 LLM-as-a-Judge"将来即以新增 `Grader` 实现接入,回归执行器与报告不改。评估层还天然是判定算法的比武场:两种 `RunFn` 跑同一套测试集,直接对比一致率。
+- 依赖单向:eval 依赖 judge(拿它当被测物),judge 对 eval **零感知**——裁判不知道自己在被考试,评估层怎么迭代都污染不到产品运行时。
+- 目录:`src/eval/` 下 `dataset.ts`(测试集 schema + 加载)、`grader.ts`(接口 + `ExactMatchGrader`)、`runner.ts`(回归执行)、`report.ts`(聚合报告)。
+- 刻意不做(YAGNI):Grader 注册表/工厂/配置选择器、抽象基类、评估管线框架——10–15 条案例的回归用不上;第二个 `Grader` 出现那天加一个构造参数即可。
+
 ## Risks / Trade-offs
 
 - **[`GRILL.md` + `profile.json` 塞不进裁判上下文]** → 概率很低:`GRILL.md` 是上游刻意做小的地图(WhatIf 实测约 5 KB),超大仓的目录树还会外置为 sidecar 不进正文。真遇到再在上游调地图密度,而非在裁判侧截断。

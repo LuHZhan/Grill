@@ -22,18 +22,18 @@
 - [x] 3.6 输出不通过 schema 校验时抛可定位的错误,不静默放行
 - [x] 3.7 产出后用 ask_reader 工具实际记录的 queries 覆盖模型自报的 `reader_queries` / `did_ask_reader`,再过 schema 校验(决策 9)
 
-## 4. 标注测试集
+## 4. 标注测试集(eval 域:`src/eval/dataset.ts`,决策 10)
 
-- [ ] 4.1 用 Zod 定义测试集格式(id / question / answer / expected[] / note)
+- [ ] 4.1 用 Zod 定义测试集案例格式 `EvalCase`(id / question / answer / expected[] / note)
 - [ ] 4.2 实现测试集加载器,格式非法时非零退出码报错
 - [ ] 4.3 交付一份带注释的测试集模板 + 2-3 条示例案例,说明三类回答各该怎么标
 - [ ] 4.4 【需用户完成】手写 10-15 条真实案例,覆盖扎实 / 虚 / 有效包装三类
 
-## 5. 回归脚本
+## 5. 回归脚本(eval 域:`src/eval/`;依赖 judge 域,反向零感知,决策 10)
 
-- [ ] 5.1 实现回归脚本:逐个把测试集案例喂给裁判,收集其 `robustness`
-- [ ] 5.2 比对判断与标注(命中 `expected[]` 任一即算一致),输出命中数 / 总数 / 一致率
-- [ ] 5.3 对不一致的案例打印:标识、标注值、裁判判断、裁判 `reasoning`
+- [ ] 5.1 定义 `Grader` 接口与 `GradeResult`,实现 `ExactMatchGrader`(命中 `expected[]` 任一即算一致)——打分策略缝,将来 LLM 复核以新增 `Grader` 实现接入
+- [ ] 5.2 实现回归执行器(`runner.ts`):逐个把测试集案例喂给裁判,经 `Grader` 收集逐条成绩
+- [ ] 5.3 实现评估报告(`report.ts`):输出命中数 / 总数 / 一致率;对不一致案例打印标识、标注值、裁判判断与其 `reasoning`
 - [ ] 5.4 单案例调用失败时记录并继续,报告中区分"判断不一致"与"调用失败"
 
 ## 6. 验证
